@@ -1,0 +1,184 @@
+/* Shell & UI layout */
+.tetris-shell {
+  height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.tetris-ui {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  width: 100%;
+  max-width: 420px;
+  padding: 0.5vh;
+}
+
+.tetris-high-score {
+  font-size: 1.5em;
+  font-weight: bold;
+  text-align: center;
+}
+
+/* Wrapper to cap total height */
+.tetris-wrapper {
+  height: 95vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Canvas container */
+/* Game playfield container */
+.tetris-container {
+  position: relative;
+  flex: 1;                     /* Fill all available space between UI elements */
+  display: flex;               /* Use flex to center the canvas */
+  justify-content: center;     /* Center horizontally */
+  align-items: center;         /* Center vertically */
+  min-height: 0;               /* Prevent flex overflow issues */
+}
+
+/* Canvas — scales with height, keeps aspect ratio */
+.tetris-container canvas {
+  display: block;
+  height: 100%;                 /* Match container height */
+  width: auto;                  /* Keep aspect ratio */
+  flex: 0 0 auto;                /* Don’t stretch */
+  background: black;
+  image-rendering: pixelated;
+  border: 2px solid white;
+}
+
+
+
+/* Controls row layout */
+.tetris-controls-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+/* Left column: Score, Level, Lines */
+.tetris-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  font-weight: bold;
+  font-size: 1.1em;
+}
+
+/* Middle: Control pad */
+.tetris-control-pad {
+  background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
+  border-radius: 20px;
+  padding: 16px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  max-width: 240px;
+}
+
+.tetris-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.control-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.tetris-controls button {
+  background: #665585;
+  border: none;
+  padding: 8px;
+  width: 48px;
+  height: 48px;
+  cursor: pointer;
+  border-radius: 12px;
+  box-shadow:
+    0 4px 6px rgba(0, 0, 0, 0.8),
+    inset 0 -2px 4px rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.tetris-controls img {
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none;
+}
+
+.rotate-left {
+  transform: rotate(-180deg);
+}
+
+.rotate-down {
+  transform: rotate(90deg);
+}
+
+/* Right column: Action buttons stacked */
+.tetris-actions-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tetris-actions-vertical button {
+  padding: 8px 12px;
+  font-size: 1rem;
+  background-color: #444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.tetris-actions-vertical button:hover {
+  background-color: #666;
+}
+
+.tetris-actions-vertical button:active {
+  background-color: #888;
+}
+
+/* Pause overlay */
+#pauseOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 50%; /* bottom half of canvas */
+  background-color: rgba(0, 0, 0, 0.9);
+  display: none;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: none;
+}
+
+.pause-label {
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  text-align: center;
+  user-select: none;
+  pointer-events: none;
+}

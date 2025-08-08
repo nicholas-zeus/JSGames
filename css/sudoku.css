@@ -1,0 +1,70 @@
+.game-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  user-select: none;
+}
+
+/* Title */
+.game-container h1 {
+  font-size: 3rem;
+  margin: 1rem 0;
+  text-align: center;
+}
+
+/* Control Panel */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+select, button {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Board */
+.board {
+  display: grid;
+  gap: 4px;
+  background: #222;
+  padding: 8px;
+  border-radius: 12px;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  max-width: 100vw;
+  overflow: auto;
+}
+
+.cell {
+  width: 9vw;
+  height: 9vw;
+  max-width: 50px;
+  max-height: 50px;
+  min-width: 30px;
+  min-height: 30px;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  border: none;
+  outline: none;
+  background: white;
+  color: #333;
+  border-radius: 6px;
+}
+
+.cell[readonly] {
+  background: #ccc;
+  color: #666;
+}
+
+.highlight {
+  background-color: #8ef5b3 !important;
+}
