@@ -1,10 +1,14 @@
+/* =========================================================
+   2048.css — iPad-safe fullscreen + no-stretch on mobile
+   - Uses dvh/dvw and safe-area in fullscreen
+   - Prevents blurry stretching: board never upscales
+   - Keeps your original look & class names
+   ========================================================= */
 
-*,
-*:before,
-*:after {
-  box-sizing: border-box;
-}
+/* ---------- Reset ---------- */
+*, *:before, *:after { box-sizing: border-box; }
 
+/* Base theme */
 html {
   min-height: 100%;
   width: 100%;
@@ -15,24 +19,98 @@ html {
   background: linear-gradient(to top, #160140, #261535);
 }
 
+/* Optional: set a base (native) board size used to cap fullscreen width */
+:root {
+  --board-base: 500px; /* adjust if your board is designed for another px size */
+}
+
+/* =========================================================
+   Fullscreen (iPad/Safari safe)
+   ========================================================= */
+
+/* Prevent the page itself from scrolling in fullscreen */
+html:fullscreen, body:fullscreen,
+html:-webkit-full-screen, body:-webkit-full-screen {
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden; /* prevent page scroll in fullscreen */
+}
+
+/* Fullscreen shell pinned to the visual viewport */
+#gameShell:fullscreen,
+#gameShell:-webkit-full-screen {
+  position: fixed; /* pin to visual viewport */
+  inset: 0;
+  width: 100dvw;
+  height: 100dvh;
+
+  /* iOS safe areas */
+  padding-top: max(env(safe-area-inset-top), 12px);
+  padding-right: max(env(safe-area-inset-right), 12px);
+  padding-bottom: max(env(safe-area-inset-bottom), 12px);
+  padding-left: max(env(safe-area-inset-left), 12px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+
+  overflow: hidden; /* CRITICAL: no scrollbars in fullscreen */
+  background: linear-gradient(to top, #160140, #261535);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Tighten vertical rhythm only in fullscreen */
+#gameShell:fullscreen .score_card,
+#gameShell:-webkit-full-screen .score_card {
+  margin: 0; /* remove extra vertical spacing */
+  max-width: 300px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#gameShell:fullscreen .controls_game,
+#gameShell:-webkit-full-screen .controls_game {
+  margin: 0; /* remove previous 2rem margin-top */
+}
+
+/* ===== Board in fullscreen: no stretch =====
+   - Cap at --board-base so it never upscales (prevents blur)
+   - Still allows downscaling on small screens (via vmin/dvw)
+   - Keep it square and avoid flex growing
+*/
+#gameShell:fullscreen .gameboard,
+#gameShell:-webkit-full-screen .gameboard {
+  width: min(var(--board-base), 92vmin, 100dvw - 48px);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+
+  /* do NOT stretch to fill column */
+  flex: 0 0 auto;
+  min-height: 0;
+  margin: 0 auto;
+
+  position: relative;
+  overflow: hidden;
+  transform-origin: top center; /* helpful if you later add JS scaling */
+}
+
+/* =========================================================
+   Your existing layout & styles
+   ========================================================= */
+
 .wrapper {
   max-width: 500px;
   margin: 0 auto;
   padding: 15px;
 }
 
-.intro {
-  margin-bottom: 60px;
-}
+.intro { margin-bottom: 60px; }
 .intro_title {
   text-align: center;
   color: #f9d49a;
   font-size: 3rem;
-}
-#gameShell:fullscreen .score_card {
-  max-width: 300px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 /* Elegant stacked score display */
@@ -94,19 +172,9 @@ html {
 }
 
 @media all and (max-width: 767px) {
-  .controls_game {
-    width: 100%;
-  }
+  .controls_game { width: 100%; }
 }
 
-/* Fullscreen */
-#gameShell:fullscreen {
-  background: linear-gradient(to top, #160140, #261535);
-  width: 100vw;
-  height: 100vh;
-  padding: 2rem;
-  overflow: auto;
-}
 #gameShell {
   transition: all 0.25s ease;
 }
@@ -124,17 +192,12 @@ html {
   position: relative;
 }
 
-
-
 /* Grid */
 .grid {
   width: 100%;
   height: 100%;
   position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  left: 0;
+  top: 0; bottom: 0; right: 0; left: 0;
   margin: auto;
 }
 .grid_cell {
@@ -150,10 +213,7 @@ html {
 /* Tile container */
 .tile-container {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   margin: auto;
   border-radius: 5px;
 }
@@ -181,21 +241,10 @@ html {
 }
 
 @keyframes newTile {
-  0% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 0;
-    transform: scale(0);
-  }
-  75% {
-    opacity: 1;
-    transform: scale(0.5);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+  0% { opacity: 0; }
+  50% { opacity: 0; transform: scale(0); }
+  75% { opacity: 1; transform: scale(0.5); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
 .tile_number {
