@@ -1,6 +1,15 @@
 function gameStart() {
   window.game = new Game(4);
-  window.game.initialize();
+
+  // Try to load a saved game; if none, start fresh.
+  if (!window.game.loadState()) {
+    window.game.initialize();
+    window.game.saveState(); // save initial empty board + first tile
+  } else {
+    // When loading, we still need listeners active.
+    window.game.initEventListeners();
+    window.game.isGameOver();
+  }
 }
 $(document).ready(gameStart);
 
@@ -18,6 +27,7 @@ function Game(size) {
 
   // High score
   this.highScoreKey = "2048_highScore";
+  this.stateKey = "2048_gameState";
   this.highScore = parseInt(localStorage.getItem(this.highScoreKey)) || 0;
 
   // Set both scores
@@ -34,6 +44,7 @@ function Game(size) {
 Game.prototype.initialize = function () {
   $(".grid").empty();
   $(".tile-container").empty();
+  this.board = [];
   this.initBoard();
   this.initTile();
   this.initEventListeners();
@@ -64,11 +75,12 @@ Game.prototype.initBoard = function () {
 };
 
 /**
- * Initialize tiles
+ * Initialize tiles (spawns one new tile)
  */
 Game.prototype.initTile = function () {
   this.isGameOver();
   var emptyCell = this.getRandomEmptyCell();
+  if (!emptyCell) return; // no room (should be handled by isGameOver)
   var tile = new Tile(emptyCell.x, emptyCell.y, this);
   this.isGameOver();
 };
@@ -105,18 +117,20 @@ Game.prototype.initEventListeners = function () {
 
   $('[data-js="newGame"]')
     .off("click.newGame")
-    .on("click.newGame", window.gameStart);
+    .on("click.newGame", function () {
+      // Clear saved state and start fresh
+      localStorage.removeItem(self.stateKey);
+      window.gameStart();
+    });
 
   // ✅ Fullscreen toggle
   $('[data-js="fullscreenToggle"]').off("click.fullscreen").on("click.fullscreen", function () {
     const shell = document.getElementById("gameShell");
 
     if (!document.fullscreenElement) {
-      shell.requestFullscreen().catch(err => {
-        console.error(`Error attempting fullscreen: ${err.message}`);
-      });
+      (shell.requestFullscreen || shell.webkitRequestFullscreen).call(shell);
     } else {
-      document.exitFullscreen();
+      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
     }
   });
 };
@@ -173,6 +187,7 @@ Game.prototype.getEmptyCells = function () {
 
 Game.prototype.getRandomEmptyCell = function () {
   var emptyGridCells = this.getEmptyCells();
+  if (!emptyGridCells.length) return null;
   var randomIndex = Math.floor(Math.random() * emptyGridCells.length);
   return emptyGridCells[randomIndex];
 };
@@ -220,12 +235,14 @@ Game.prototype.moveAnimations = function (gameBoard) {
     self.moveInProgress = false;
     self.TileMerge();
     self.initTile();
+    self.saveState(); // ✅ save after movement + merge + new spawn
   });
 
   if (promiseArray.length === 0) {
     self.moveInProgress = false;
     self.TileMerge();
     self.initTile();
+    self.saveState(); // ✅ save even if no animations
   }
 };
 
@@ -258,6 +275,73 @@ Game.prototype.move = function (getDirection) {
   if (hasAnyTileMoved) this.moveAnimations(gameBoard);
 };
 
+/* =========================================================
+ * Save / Load state
+ * =======================================================*/
+Game.prototype.saveState = function () {
+  try {
+    // Save a simple 2D matrix of values (0 for empty)
+    var matrix = [];
+    for (var x = 0; x < this.rows; x++) {
+      var row = [];
+      for (var y = 0; y < this.columns; y++) {
+        var cell = this.board[x][y];
+        row.push(cell.tilesArray.length ? cell.tilesArray[0].valueProp : 0);
+      }
+      matrix.push(row);
+    }
+
+    var state = {
+      rows: this.rows,
+      columns: this.columns,
+      board: matrix,
+      score: this.score,
+      highScore: this.highScore
+    };
+    localStorage.setItem(this.stateKey, JSON.stringify(state));
+  } catch (e) {
+    console.warn("Failed to save game state:", e);
+  }
+};
+
+Game.prototype.loadState = function () {
+  try {
+    var saved = localStorage.getItem(this.stateKey);
+    if (!saved) return false;
+
+    var state = JSON.parse(saved);
+    if (!state || !Array.isArray(state.board)) return false;
+
+    // reset containers
+    $(".grid").empty();
+    $(".tile-container").empty();
+    this.board = [];
+    this.initBoard();
+
+    // restore tiles from matrix
+    for (var x = 0; x < state.rows; x++) {
+      for (var y = 0; y < state.columns; y++) {
+        var value = state.board[x][y];
+        if (value > 0) {
+          var t = new Tile(x, y, this);
+          t.value = value; // use setter to update DOM/content
+        }
+      }
+    }
+
+    // restore scores
+    this.score = state.score || 0;
+    this.highScore = state.highScore || (parseInt(localStorage.getItem(this.highScoreKey)) || 0);
+    $('[data-js="score"]').html(this.score.toString());
+    $('[data-js="highScore"]').html(this.highScore.toString());
+
+    return true;
+  } catch (e) {
+    console.warn("Failed to load game state:", e);
+    return false;
+  }
+};
+
 /*
  * Tile
  */
@@ -265,7 +349,10 @@ function Tile(x, y, game) {
   this.game = game;
   this.x = x;
   this.y = y;
-  this.valueProp = Math.random() < 0.3 ? 4 : 2;
+
+  // Randomly choose starting value: 2 (~70%) or 4 (~30%)
+  this.valueProp = Math.random() < 0.3 ? 4 : 2; // CHANGED
+
   this.canMove = false;
 
   Object.defineProperties(this, {
