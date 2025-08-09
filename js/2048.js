@@ -265,7 +265,7 @@ function Tile(x, y, game) {
   this.game = game;
   this.x = x;
   this.y = y;
-  this.valueProp = 2;
+  this.valueProp = Math.random() < 0.3 ? 4 : 2;
   this.canMove = false;
 
   Object.defineProperties(this, {
