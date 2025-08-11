@@ -147,7 +147,7 @@ Game.prototype.gameWon = function () {
  * Game is LOST!
  */
 Game.prototype.gameLost = function () {
-  alert("what a loser!");
+  alert("You lost!");
 };
 
 /**
