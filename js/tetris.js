@@ -161,30 +161,74 @@ function draw() {
 }
 
 function update(time = 0) {
-  if (isPaused || isGameOver) return requestAnimationFrame(update);
-  const deltaTime = time - lastTime; lastTime = time;
-
-  if (isClearing) {
-    lineClearFrame++;
-    if (lineClearFrame >= lineClearDuration) {
-      outer: for (let y = arena.length - 1; y >= 0; --y) {
-        for (let x = 0; x < arena[y].length; ++x) { if (arena[y][x] === 0) continue outer; }
-        arena.splice(y, 1); arena.unshift(new Array(arenaWidth).fill(0)); ++y;
-      }
-      const linesCleared = linesToClear.length;
-      player.lines += linesCleared;
-      player.score += baseScores[linesCleared] * (player.level + 1);
-      if (player.score > player.highScore) {
-        player.highScore = player.score; localStorage.setItem('highScore', player.highScore);
-      }
-      if (player.lines >= (player.level + 1) * 10) { player.level++; dropInterval = Math.max(100, 1000 - player.level * 100); }
-      updateScore(); linesToClear = []; isClearing = false; playerReset();
-    }
-    draw(); return requestAnimationFrame(update);
+  if (isPaused || isGameOver) {
+    draw();
+    return requestAnimationFrame(update);
   }
 
-  dropCounter += deltaTime; if (dropCounter > dropInterval) playerDrop();
-  draw(); requestAnimationFrame(update);
+  const deltaTime = time - lastTime;
+  lastTime = time;
+
+  // Handle fade-out + row removal
+  if (isClearing) {
+    lineClearFrame++;
+
+    if (lineClearFrame >= lineClearDuration) {
+      // Remove all full rows (matches your existing sweep logic)
+      let rowsCleared = 0;
+      outer: for (let y = arena.length - 1; y >= 0; --y) {
+        for (let x = 0; x < arena[y].length; ++x) {
+          if (arena[y][x] === 0) continue outer;
+        }
+        arena.splice(y, 1);
+        arena.unshift(new Array(arenaWidth).fill(0));
+        rowsCleared++;
+        ++y; // re-check same y since rows moved down
+      }
+
+      const linesCleared = rowsCleared;
+
+      // Score & lines
+      if (linesCleared > 0) {
+        player.lines += linesCleared;
+        player.score += (baseScores[linesCleared] || 0) * (player.level + 1);
+
+        // High score
+        if (player.score > player.highScore) {
+          player.highScore = player.score;
+          localStorage.setItem('highScore', player.highScore);
+        }
+
+        // Level-up(s) + coin award (coins = level * 10)
+        while (player.lines >= (player.level + 1) * 10) {
+          player.level++;
+          dropInterval = Math.max(100, 1000 - player.level * 100);
+          try {
+            Coins.add(player.level * 10, `Reached Level ${player.level}`, { source: 'tetris' });
+          } catch (e) {
+            // keep gameplay smooth if Coins module/UI/storage isn't available
+          }
+        }
+      }
+
+      updateScore();
+      linesToClear = [];
+      isClearing = false;
+      playerReset();
+    }
+
+    draw();
+    return requestAnimationFrame(update);
+  }
+
+  // Normal gravity
+  dropCounter += deltaTime;
+  if (dropCounter > dropInterval) {
+    playerDrop();
+  }
+
+  draw();
+  return requestAnimationFrame(update);
 }
 
 function playerDrop() { player.pos.y++; if (collide(arena, player)) { player.pos.y--; merge(arena, player); sweepArena(); playerReset(); } dropCounter = 0; }
