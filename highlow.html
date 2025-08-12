@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>High–Low</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Your global site theme -->
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Game-local styles -->
+  <link rel="stylesheet" href="css/highlow.css" />
+</head>
+<body class="casino-dark">
+  <div class="site-shell">
+    <!-- optional site header/nav goes here -->
+    <main class="hl-container">
+      <section class="hl-table shadow-xl">
+        <header class="hl-header">
+          <h1 class="hl-title">High–Low</h1>
+          <p class="hl-sub">Guess the next card. Cash out before you lose.</p>
+        </header>
+
+        <!-- Score/State -->
+        <div class="hl-stats">
+          <div class="stat">
+            <div class="label">Bet</div>
+            <div class="value"><span id="betDisplay">10</span> 🪙</div>
+          </div>
+          <div class="stat">
+            <div class="label">Streak</div>
+            <div class="value"><span id="streak">0</span></div>
+          </div>
+          <div class="stat">
+            <div class="label">Potential Cash Out</div>
+            <div class="value"><span id="cashOutValue">0</span> 🪙</div>
+          </div>
+        </div>
+
+        <!-- Cards -->
+        <div class="hl-cards">
+          <div class="card current" id="currentCard">
+            <div class="card-face">
+              <div class="rank" id="curRank">A</div>
+              <div class="suit" id="curSuit"></div>
+            </div>
+          </div>
+          <div class="vs">→</div>
+          <div class="card next" id="nextCard">
+            <div class="card-face back">
+              <div class="back-pattern"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="hl-controls">
+          <div class="betper">
+            <label for="betRange">Bet</label>
+            <div class="bet-ctrl">
+              <button class="btn sm" data-bet="down" title="-10">−</button>
+              <input id="betRange" type="range" min="10" max="100" step="10" value="10" />
+              <button class="btn sm" data-bet="up" title="+10">+</button>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button id="btnStart" class="btn primary">Place Bet</button>
+            <button id="btnHigh" class="btn" disabled>Higher ↑</button>
+            <button id="btnLow" class="btn" disabled>Lower ↓</button>
+            <button id="btnCashOut" class="btn success" disabled>Cash Out</button>
+            <button id="btnReset" class="btn ghost">Reset</button>
+          </div>
+        </div>
+
+        <footer class="hl-hint">
+          <small>House edge: outcome RNG biased so the house wins ~56% of rounds. Ties count as a loss.</small>
+        </footer>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="js/highlow.js"></script>
+</body>
+</html>
