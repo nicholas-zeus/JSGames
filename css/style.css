@@ -1,4 +1,6 @@
-/* Global Reset & Fonts */
+/* =========================
+   Global Reset & Fonts
+   ========================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -12,31 +14,30 @@ body {
   min-height: 100vh;
 }
 
-/* Shared Header */
+/* =========================
+   Header (Desktop: one line)
+   coin | title | nav
+   Mobile: two lines
+   line1: title centered
+   line2: coin left | burger right (nav slides in)
+   ========================= */
 .site-header {
   width: 100%;
-  box-sizing: border-box;
   background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 2rem;
   position: sticky;
   top: 0;
   z-index: 1000;
+
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-template-areas: "coin title nav";
+  align-items: center;
+  padding: 1rem 2rem;
 }
 
-.logo {
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #fff;
-}
-
-/* Desktop Nav */
-.nav {
-  display: flex;
-  gap: 1.5rem;
-}
+#coin-ui-root { grid-area: coin; }
+.logo { grid-area: title; justify-self: center; font-size: 1.8rem; font-weight: bold; color: #fff; }
+.nav { grid-area: nav; display: flex; gap: 1.5rem; }
 
 .nav a {
   text-decoration: none;
@@ -45,13 +46,11 @@ body {
   font-size: 1rem;
   transition: color 0.3s ease;
 }
+.nav a:hover { color: #ffd700; }
 
-.nav a:hover {
-  color: #ffd700;
-}
-
-/* Burger Menu Styles */
+/* Burger Menu */
 .menu-icon {
+  grid-area: nav; /* occupies the right slot on mobile */
   display: none;
   font-size: 2rem;
   cursor: pointer;
@@ -59,12 +58,21 @@ body {
   z-index: 1101;
 }
 
-#menu-toggle {
-  display: none;
-}
+#menu-toggle { display: none; }
 
-/* Mobile Nav */
+/* Mobile Nav Drawer */
 @media (max-width: 768px) {
+  .site-header {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "title title"
+      "coin  nav";
+    row-gap: .5rem;
+    padding: 0.85rem 1rem;
+  }
+
+  .menu-icon { display: block; justify-self: end; }
+
   .nav {
     flex-direction: column;
     position: fixed;
@@ -84,21 +92,20 @@ body {
     margin-bottom: 1.2rem;
   }
 
+  /* keep this exact sibling relation in HTML:
+     input#menu-toggle + label.menu-icon + nav.nav */
   #menu-toggle:checked + .menu-icon + .nav {
     transform: translateX(0);
   }
-
-  .menu-icon {
-    display: block;
-  }
 }
 
-/* Hero Section */
+/* =========================
+   Hero
+   ========================= */
 .hero {
   text-align: center;
   padding: 4rem 1rem 2rem;
 }
-
 .hero h1 {
   font-size: 3rem;
   font-weight: bold;
@@ -107,17 +114,13 @@ body {
 }
 
 @keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(-30px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Game Grid Layout */
+/* =========================
+   Games Grid
+   ========================= */
 .games-grid {
   display: flex;
   flex-wrap: wrap;
@@ -139,24 +142,19 @@ body {
   align-items: center;
   transition: transform 0.3s ease;
 }
-
-.game-card:hover {
-  transform: translateY(-8px);
-}
+.game-card:hover { transform: translateY(-8px); }
 
 .game-card h2 {
   font-size: 1.5rem;
   margin-bottom: 1rem;
   color: #fff;
 }
-
 .game-card p {
   font-size: 1rem;
   text-align: center;
   margin-bottom: 1.5rem;
   color: #ddd;
 }
-
 .game-card a {
   text-decoration: none;
   padding: 0.7rem 1.5rem;
@@ -166,7 +164,146 @@ body {
   border-radius: 8px;
   transition: background 0.3s ease;
 }
+.game-card a:hover { background: #ffc300; }
 
-.game-card a:hover {
-  background: #ffc300;
+/* =========================
+   Coins UI (Badge, Modal, Toasts)
+   ========================= */
+.coin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  margin-left: 0; /* sits on the left; no extra offset */
+  padding: .45rem .75rem;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.25);
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.coin-badge svg { width: 18px; height: 18px; }
+
+/* Focus rings (a11y) */
+.coin-badge:focus-visible,
+.coin-modal button:focus-visible {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
+
+/* Backdrop + Modal shell */
+.coin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: none;
+  z-index: 2000;
+}
+.coin-modal {
+  position: fixed;
+  left: 50%;
+  top: 10%;
+  transform: translateX(-50%);
+  width: min(720px, 92vw);
+  max-height: 80vh;
+  overflow: hidden;
+  background: rgba(0,0,0,.9);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.6);
+  z-index: 2001;
+  display: none;
+  color: #fff;
+}
+.coin-modal header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .9rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,.15);
+}
+.coin-modal .coin-body {
+  padding: .75rem 1rem;
+  /* scroll inner body if history is long */
+  max-height: calc(80vh - 140px);
+  overflow: auto;
+}
+.coin-filters {
+  display: flex;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: .5rem;
+}
+.coin-filters input,
+.coin-filters select,
+.coin-filters button {
+  padding: .4rem .6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+.coin-row {
+  display: grid;
+  grid-template-columns: 120px 80px 1fr 120px;
+  gap: .5rem;
+  align-items: center;
+  padding: .5rem 0;
+  border-bottom: 1px dashed rgba(255,255,255,.08);
+}
+.coin-row .type { font-weight: 700; }
+.coin-row .amt.earn { color: #7CFFB2; }
+.coin-row .amt.spend { color: #FF8A8A; }
+
+.coin-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .75rem 1rem;
+  border-top: 1px solid rgba(255,255,255,.15);
+}
+
+/* Responsive history rows on small screens */
+@media (max-width: 560px) {
+  .coin-row { grid-template-columns: 1fr; }
+  .coin-row .bal { opacity: .85; }
+}
+
+/* Toasts (near center, stacked; fullscreen-safe via JS parenting) */
+.coin-toasts {
+  position: fixed;
+  left: 50%;
+  top: 18vh;                 /* adjust to taste; 50% for exact center */
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 2100;
+  pointer-events: none;      /* clicks pass through empty space */
+}
+.coin-toast {
+  pointer-events: auto;      /* toast itself can still be clickable if needed */
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  background: rgba(0,0,0,.85);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 12px;
+  padding: .6rem .9rem;
+  min-width: 200px;
+  max-width: min(90vw, 420px);
+  text-align: center;
+}
+.coin-toast svg { width: 18px; height: 18px; flex: 0 0 18px; }
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  .coin-toast { transition: none; }
+}
+
+/* Optional mobile nudge */
+@media (max-width: 560px) {
+  .coin-toasts { top: 14vh; }
 }

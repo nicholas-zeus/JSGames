@@ -4,11 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>2048</title>
+
+  <!-- Game styles -->
   <link rel="stylesheet" href="css/2048.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <!-- Header: coin | title | nav (mobile: title on line1; coins/burger on line2) -->
   <header class="site-header">
+    <div id="coin-ui-root"></div>
     <div class="logo">Trendy Games</div>
     <input type="checkbox" id="menu-toggle" />
     <label for="menu-toggle" class="menu-icon">&#9776;</label>
@@ -16,43 +20,39 @@
       <a href="index.html">Home</a>
     </nav>
   </header>
-  <!-- main -->
-  <!-- wrapper -->
-<main class="wrapper">
-  <!-- game shell: for fullscreen toggle -->
-  <div id="gameShell">
 
-    <!-- score display -->
-<!-- Score Display -->
-<div class="score_card">
-  <div class="controls_score">
-    <span class="controls_score-label">High Score</span>
-    <span class="controls_score-text" data-js="highScore">0</span>
-  </div>
-  <div class="controls_score">
-    <span class="controls_score-label">Score</span>
-    <span class="controls_score-text" data-js="score">0</span>
-  </div>
-</div>
+  <main class="wrapper">
+    <div id="gameShell">
 
+      <!-- Score Display -->
+      <div class="score_card">
+        <div class="controls_score">
+          <span class="controls_score-label">High Score</span>
+          <span class="controls_score-text" data-js="highScore">0</span>
+        </div>
+        <div class="controls_score">
+          <span class="controls_score-label">Score</span>
+          <span class="controls_score-text" data-js="score">0</span>
+        </div>
+      </div>
 
-    <!-- gameboard -->
-    <div id="touchGameboard" class="gameboard">
-      <div class="grid"></div>
-      <div class="tile-container"></div>
+      <!-- Gameboard -->
+      <div id="touchGameboard" class="gameboard">
+        <div class="grid"></div>
+        <div class="tile-container"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls_game">
+        <button data-js="newGame" class="controls_game-btn">New Game</button>
+        <button data-js="undo" class="controls_game-btn">Undo</button>
+        <button data-js="fullscreenToggle" class="controls_game-btn">Fullscreen</button>
+      </div>
+
     </div>
+  </main>
 
-    <!-- controls below game -->
-    <div class="controls_game">
-      <button data-js="newGame" class="controls_game-btn">New Game</button>
-      <button data-js="fullscreenToggle" class="controls_game-btn">Fullscreen</button>
-    </div>
-
-  </div>
-</main>
-
-
-  <!-- templates -->
+  <!-- Templates -->
   <script type="text/html" id="template_grid_cell">
     <div class="grid_cell"></div>
   </script>
@@ -63,12 +63,12 @@
     </div>
   </script>
 
-  <!-- required libraries -->
+  <!-- Third-party libs as globals (OK with ESM game script) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 
-  <!-- your game logic -->
-  <script src="js/2048.js"></script>
+  <!-- Game as ESM -->
+  <script type="module" src="js/2048.js"></script>
 </body>
 </html>

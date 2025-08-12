@@ -4,17 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tetris</title>
-
-  <!-- Shared layout styles -->
   <link rel="stylesheet" href="css/style.css" />
-  
-  <!-- Game-specific styles -->
   <link rel="stylesheet" href="css/tetris.css" />
 </head>
 <body>
-
-  <!-- Shared site header -->
   <header class="site-header">
+    <div id="coin-ui-root"></div>
     <div class="logo">Trendy Games</div>
     <input type="checkbox" id="menu-toggle" />
     <label for="menu-toggle" class="menu-icon">&#9776;</label>
@@ -23,35 +18,20 @@
     </nav>
   </header>
 
-  <!-- Game shell -->
   <div class="tetris-shell">
     <div class="tetris-ui">
       <div class="tetris-wrapper">
-
-        <!-- High Score -->
-        <div class="tetris-high-score">
-          High Score: <span id="highScore">0</span>
-        </div>
-
-        <!-- Canvas Area -->
+        <div class="tetris-high-score">High Score: <span id="highScore">0</span></div>
         <div class="tetris-container">
           <canvas id="tetris"></canvas>
-          <div id="pauseOverlay">
-            <div class="pause-label">PAUSED</div>
-          </div>
+          <div id="pauseOverlay"><div class="pause-label">PAUSED</div></div>
         </div>
-
-        <!-- Controls row -->
         <div class="tetris-controls-row">
-          
-          <!-- Left column: Stats -->
           <div class="tetris-stats">
             <div class="tetris-score">Score: <span id="scoreBottom">0</span></div>
             <div class="tetris-level">Level: <span id="level">0</span></div>
             <div class="tetris-lines">Lines: <span id="lines">0</span></div>
           </div>
-
-          <!-- Center: Control pad -->
           <div class="tetris-control-pad">
             <div class="tetris-controls">
               <div class="control-row">
@@ -64,19 +44,17 @@
               </div>
             </div>
           </div>
-
-          <!-- Right column: Actions -->
           <div class="tetris-actions-vertical">
             <button id="pauseBtn">Pause</button>
             <button id="resetBtn">Reset</button>
             <button id="fullscreenBtn">⛶</button>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 
-  <script src="js/tetris.js"></script>
+  <!-- Game as ESM -->
+  <script type="module" src="js/tetris.js"></script>
 </body>
 </html>
