@@ -139,3 +139,37 @@ body.casino-dark {
   .vs { justify-self: center; transform: rotate(90deg); }
   .actions { grid-template-columns: repeat(2, 1fr); }
 }
+/* --- viewport fit + side-by-side overrides --- */
+body.casino-dark { overflow: hidden; }                     /* prevent page scroll */
+.hl-container { padding: 8px; min-height: 100vh; }         /* compact padding */
+.hl-table {
+  width: min(900px, 96vw);
+  max-height: calc(100vh - 24px);
+  padding: 12px;
+  overflow: hidden;
+}
+
+/* cards always side-by-side, even on mobile */
+.hl-cards { grid-template-columns: 1fr auto 1fr; gap: 12px; }
+
+/* scale cards to fit small screens neatly */
+.card { width: clamp(120px, 28vw, 200px); border-radius: 14px; }
+.card .card-face { border-radius: 14px; }
+
+/* type scales down on small screens */
+.rank { font-size: clamp(18px, 3.8vw, 28px); }
+.suit {
+  width: clamp(22px, 4.2vw, 34px);
+  height: clamp(22px, 4.2vw, 34px);
+  display: grid; place-items: center;
+  font-size: clamp(18px, 3.8vw, 28px);
+  /* when using emoji/text suits */
+  background: none !important;
+}
+
+/* stats + buttons tighten on mobile but keep 1 row cards */
+@media (max-width: 820px) {
+  .hl-stats { grid-template-columns: 1fr 1fr 1fr; } /* keep in one line */
+  .actions  { grid-template-columns: repeat(5, minmax(0,1fr)); }
+  .vs { transform: none; } /* no rotation */
+}
