@@ -167,3 +167,29 @@ body.casino-dark {
   .vs { transform: none; }
   .actions { grid-template-columns: repeat(5, 1fr); }
 }
+/* === Layout fix: center game vertically with a header present === */
+html, body { height: 100%; }
+
+/* Make the whole page a column: header on top, main fills the rest */
+.site-shell {
+  min-height: 100dvh;          /* use dynamic viewport for mobile chrome */
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header keeps natural height */
+.site-header { flex: 0 0 auto; }
+
+/* Game area fills remaining height and centers its content */
+.hl-container {
+  flex: 1 1 auto;
+  min-height: 0 !important;    /* override the 100vh rule */
+  display: grid;
+  place-items: center;          /* centers the .hl-table vertically & horizontally */
+  padding: 8px;                 /* keep your compact padding */
+}
+
+/* Optional: cap table height to avoid touching bottom edge on tiny screens */
+.hl-table {
+  max-height: calc(100dvh - 24px); /* already present in one variant; safe here too */
+}
