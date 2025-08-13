@@ -8,7 +8,7 @@ const MAX_BET = 100;
 const STEP_BET = 10;
 
 // House wins target probability:
-const HOUSE_WIN_PROB = 0.56; // ~56% house wins (ties also count as house win)
+const HOUSE_WIN_PROB = 0.56; // ~56% house wins (ties also count as a loss)
 
 // Streak multipliers (applied to ORIGINAL bet on cash out)
 const STREAK_MULTIPLIERS = [0, 1.9, 2.5, 3.0]; 
@@ -52,16 +52,6 @@ const RANK_VAL = (r) => {
   return parseInt(r, 10);
 };
 
-function svgSuit(suit, color) {
-  // Simple vector—keeps file self-contained
-  const txt = encodeURIComponent(suit);
-  const fill = encodeURIComponent(color);
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'>
-    <text x='50' y='70' text-anchor='middle' font-size='86' fill='${fill}' font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial">${txt}</text>
-  </svg>`;
-  return `url("data:image/svg+xml;utf8,${svg}")`;
-}
-
 function randomCard() {
   const r = RANKS[Math.floor(Math.random() * RANKS.length)];
   const s = SUITS[Math.floor(Math.random() * SUITS.length)];
@@ -69,15 +59,15 @@ function randomCard() {
 }
 
 function setCard(el, card, reveal = false) {
+  // Flip visual state
   if (reveal) el.classList.add('revealed');
   else el.classList.remove('revealed');
 
+  // Only the current card has fixed DOM children for rank/suit
   if (el === currentCardEl) {
     curRankEl.textContent = card.rank;
-    curSuitEl.style.backgroundImage = svgSuit(card.suit, SUIT_COLORS[card.suit]);
-  } else {
-    // next card: front is implied by flipping the "back"
-    // We'll flip the .next card to reveal by toggling class
+    curSuitEl.textContent = card.suit;              // emoji/text suit
+    curSuitEl.style.color = SUIT_COLORS[card.suit]; // color suit
   }
 }
 
@@ -90,7 +80,8 @@ function getCashOutValue() {
 
 function updateUI() {
   betDisplay.textContent = String(bet);
-  betRange.value = String(bet);
+  if (betRange) betRange.value = String(bet);
+
   streakDisplay.textContent = String(streak);
   cashOutValueEl.textContent = String(getCashOutValue());
 
@@ -105,71 +96,64 @@ function resetRoundState() {
   awaitingGuess = false;
   streak = 0;
   nextCard = null;
-  // Reset next card to back
+
+  // Reset next card to back pattern
+  nextCardEl.innerHTML = `
+    <div class="card-face back">
+      <div class="back-pattern"></div>
+    </div>
+  `;
   nextCardEl.classList.remove('revealed');
+
   updateUI();
 }
 
 function flipAndShowNext(next) {
-  // Paint front content by temporarily swapping the "back" for visual flip illusion
+  // Build a face for the next card (front)
   const tmp = document.createElement('div');
   tmp.className = 'card-face';
   tmp.innerHTML = `
     <div class="rank">${next.rank}</div>
-    <div class="suit" style="background-image:${svgSuit(next.suit, SUIT_COLORS[next.suit])}"></div>
+    <div class="suit" style="color:${SUIT_COLORS[next.suit]}">${next.suit}</div>
   `;
-  // Replace child inside #nextCard
+  // Replace child inside #nextCard with the "front"
   nextCardEl.innerHTML = '';
   nextCardEl.appendChild(tmp);
-  // Animate (simple class swap)
+  // Animate flip
   nextCardEl.classList.add('revealed');
 }
 
-function riggedOutcome(userGuess, curVal) {
-  // Target: ~44% chance player wins (house 56%)
-  // 1) Decide desired outcome using biased RNG
-  const wantWin = Math.random() < (1 - HOUSE_WIN_PROB); // ~0.44
+/**
+ * Deterministic biased picker:
+ * - Decide if player SHOULD win this guess (~44%) or lose (~56%).
+ * - Build a pool of values guaranteeing that outcome for the player's choice.
+ * - Include current value in the "lose" pool to make ties a loss.
+ * - If the pool is empty (edge ranks), flip to the only possible outcome.
+ */
+function pickNextCardBiased(curVal, guess) {
+  // Target: ~44% player win; ties = player loss
+  const playerShouldWin = Math.random() < (1 - HOUSE_WIN_PROB); // ~0.44
 
-  // 2) If we want a win but it's impossible (e.g., cur A and guess High), force loss; vice versa.
-  const hasHigher = curVal < 14;
-  const hasLower  = curVal > 2;
+  const higher = [];        // values strictly > curVal
+  const lower  = [];        // values strictly < curVal
+  for (let v = 2; v <= 14; v++) {
+    if (v > curVal) higher.push(v);
+    else if (v < curVal) lower.push(v);
+  }
 
-  if (wantWin) {
-    if ((userGuess === 'high' && !hasHigher) || (userGuess === 'low' && !hasLower)) {
-      return false;
-    }
-    return true;
+  let poolVals = [];
+  if (guess === 'high') {
+    poolVals = playerShouldWin ? higher : [...lower, curVal]; // tie in loss pool
   } else {
-    if ((userGuess === 'high' && !hasLower) || (userGuess === 'low' && !hasHigher)) {
-      return true;
-    }
-    return false;
+    poolVals = playerShouldWin ? lower : [...higher, curVal]; // tie in loss pool
   }
-}
 
-function drawCompatibleCard(curVal, wantWin, guess) {
-  // Build allowable values based on desired outcome.
-  let pool = [];
-  if (wantWin) {
-    if (guess === 'high') {
-      for (let v = curVal + 1; v <= 14; v++) pool.push(v);
-    } else {
-      for (let v = 2; v <= curVal - 1; v++) pool.push(v);
-    }
-  } else {
-    // House wins on loss OR tie
-    if (guess === 'high') {
-      for (let v = 2; v <= curVal; v++) pool.push(v);
-    } else {
-      for (let v = curVal; v <= 14; v++) pool.push(v);
-    }
+  if (poolVals.length === 0) {
+    // Edge case: if winning set is impossible (e.g., cur=A & guess=high)
+    poolVals = guess === 'high' ? [...lower, curVal] : [...higher, curVal];
   }
-  if (pool.length === 0) {
-    // Fallback to any random (should be rare thanks to riggedOutcome guard)
-    return randomCard();
-  }
-  const val = pool[Math.floor(Math.random() * pool.length)];
-  // map back to rank string
+
+  const val = poolVals[Math.floor(Math.random() * poolVals.length)];
   const rank = (val === 14) ? 'A' : (val === 13 ? 'K' : (val === 12 ? 'Q' : (val === 11 ? 'J' : String(val))));
   const suit = SUITS[Math.floor(Math.random() * SUITS.length)];
   return { rank, suit, value: val };
@@ -179,7 +163,8 @@ function drawCompatibleCard(curVal, wantWin, guess) {
 function dealOpeningCard() {
   currentCard = randomCard();
   setCard(currentCardEl, currentCard, false);
-  // prepare next card face-down
+
+  // Prepare next card face-down
   nextCardEl.innerHTML = `
     <div class="card-face back">
       <div class="back-pattern"></div>
@@ -210,23 +195,25 @@ function makeGuess(dir) {
   updateUI();
 
   const curVal = currentCard.value;
-  const wantWin = riggedOutcome(dir, curVal);
-  nextCard = drawCompatibleCard(curVal, wantWin, dir);
+  nextCard = pickNextCardBiased(curVal, dir);
 
-  // Reveal with animation
+  // Reveal with small delay for flip
   setTimeout(() => flipAndShowNext(nextCard), 80);
 
   setTimeout(() => {
     const win = (dir === 'high')
       ? (nextCard.value > curVal)
       : (nextCard.value < curVal);
+    // ties implicitly count as loss (==)
 
     if (win) {
       streak++;
-      // Move next -> current for next round
+
+      // Move next -> current for another guess
       currentCard = nextCard;
       setCard(currentCardEl, currentCard, false);
-      // Reset next to back for another guess
+
+      // Reset next to back for next round
       nextCardEl.innerHTML = `
         <div class="card-face back"><div class="back-pattern"></div></div>
       `;
@@ -238,7 +225,15 @@ function makeGuess(dir) {
       // Loss → round ends, streak reset, no payout
       resetRoundState();
       // subtle shake feedback
-      currentCardEl.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 280, easing: 'ease-in-out' });
+      currentCardEl.animate(
+        [
+          { transform: 'translateX(0)' },
+          { transform: 'translateX(-6px)' },
+          { transform: 'translateX(6px)' },
+          { transform: 'translateX(0)' }
+        ],
+        { duration: 280, easing: 'ease-in-out' }
+      );
     }
   }, 520);
 }
@@ -255,16 +250,16 @@ async function cashOut() {
 }
 
 // ---------- Wire up ----------
-betRange.addEventListener('input', (e) => {
-  bet = Math.max(MIN_BET, Math.min(MAX_BET, Math.round(Number(e.target.value) / STEP_BET) * STEP_BET));
-  betDisplay.textContent = String(bet);
-});
-document.querySelector('[data-bet="down"]').addEventListener('click', () => {
-  bet = Math.max(MIN_BET, bet - STEP_BET); updateUI();
-});
-document.querySelector('[data-bet="up"]').addEventListener('click', () => {
-  bet = Math.max(MIN_BET, Math.min(MAX_BET, bet + STEP_BET)); updateUI();
-});
+if (betRange) {
+  betRange.addEventListener('input', (e) => {
+    bet = Math.max(MIN_BET, Math.min(MAX_BET, Math.round(Number(e.target.value) / STEP_BET) * STEP_BET));
+    betDisplay.textContent = String(bet);
+  });
+}
+const btnDown = document.querySelector('[data-bet="down"]');
+const btnUp   = document.querySelector('[data-bet="up"]');
+if (btnDown) btnDown.addEventListener('click', () => { bet = Math.max(MIN_BET, bet - STEP_BET); updateUI(); });
+if (btnUp)   btnUp.addEventListener('click',   () => { bet = Math.max(MIN_BET, Math.min(MAX_BET, bet + STEP_BET)); updateUI(); });
 
 btnStart.addEventListener('click', placeBet);
 btnHigh.addEventListener('click', () => makeGuess('high'));
