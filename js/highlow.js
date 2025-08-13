@@ -7,17 +7,13 @@ const MIN_BET = 10;
 const MAX_BET = 100;
 const STEP_BET = 10;
 
-// House wins target probability:
-const HOUSE_WIN_PROB = 0.56; // ~56% house wins (ties also count as a loss)
-
-// Streak multipliers (applied to ORIGINAL bet on cash out)
-const STREAK_MULTIPLIERS = [0, 1.9, 2.5, 3.0]; 
-// index 0 unused; 1 win->1.9x, 2 wins->2.5x, 3+ wins->3.0x
+const HOUSE_WIN_PROB = 0.56; // ~56% house wins; ties = player loss
+const STREAK_MULTIPLIERS = [0, 1.9, 2.5, 3.0]; // 1 win->1.9x, 2->2.5x, 3+->3x
 
 // ---------- State ----------
 let bet = MIN_BET;
 let streak = 0;
-let inRound = false;      // has an active bet been placed?
+let inRound = false;
 let awaitingGuess = false;
 let currentCard = null;
 let nextCard = null;
@@ -31,7 +27,7 @@ const cashOutValueEl = $('#cashOutValue');
 
 const btnStart = $('#btnStart');
 const btnHigh = $('#btnHigh');
-const btnLow = $('#btnLow');
+const btnLow  = $('#btnLow');
 const btnCash = $('#btnCashOut');
 const btnReset = $('#btnReset');
 
@@ -58,20 +54,6 @@ function randomCard() {
   return { rank: r, suit: s, value: RANK_VAL(r) };
 }
 
-function setCard(el, card, reveal = false) {
-  // Flip visual state
-  if (reveal) el.classList.add('revealed');
-  else el.classList.remove('revealed');
-
-  // Only the current card has fixed DOM children for rank/suit
-  if (el === currentCardEl) {
-    curRankEl.textContent = card.rank;
-    curSuitEl.textContent = card.suit;              // emoji/text suit
-    curSuitEl.style.color = SUIT_COLORS[card.suit]; // color suit
-  }
-}
-
-// potential cash-out = bet * multiplier(streak)
 function getCashOutValue() {
   const m = streak >= 3 ? STREAK_MULTIPLIERS[3] : STREAK_MULTIPLIERS[streak];
   if (!m) return 0;
@@ -86,9 +68,47 @@ function updateUI() {
   cashOutValueEl.textContent = String(getCashOutValue());
 
   btnHigh.disabled = !awaitingGuess;
-  btnLow.disabled = !awaitingGuess;
+  btnLow.disabled  = !awaitingGuess;
   btnCash.disabled = !(inRound && streak > 0);
   btnStart.disabled = inRound || awaitingGuess;
+}
+
+function ensureNextCardFacesExist() {
+  // Ensure .card-face.back and .card-face.front exist simultaneously in #nextCard
+  let back = nextCardEl.querySelector('.card-face.back');
+  let front = nextCardEl.querySelector('.card-face.front');
+
+  if (!back) {
+    back = document.createElement('div');
+    back.className = 'card-face back';
+    back.innerHTML = `<div class="back-pattern"></div>`;
+    nextCardEl.appendChild(back);
+  }
+  if (!front) {
+    front = document.createElement('div');
+    front.className = 'card-face front';
+    front.innerHTML = `
+      <div class="rank"></div>
+      <div class="suit"></div>
+    `;
+    nextCardEl.appendChild(front);
+  }
+  return { back, front };
+}
+
+function setCurrentCardUI(card) {
+  curRankEl.textContent = card.rank;
+  curSuitEl.textContent = card.suit;
+  curSuitEl.style.color = SUIT_COLORS[card.suit];
+}
+
+function setNextFrontFaceUI(card) {
+  const front = nextCardEl.querySelector('.card-face.front');
+  if (!front) return;
+  const r = front.querySelector('.rank');
+  const s = front.querySelector('.suit');
+  if (r) r.textContent = card.rank;
+  if (s) { s.textContent = card.suit; s.style.color = SUIT_COLORS[card.suit]; }
 }
 
 function resetRoundState() {
@@ -97,45 +117,25 @@ function resetRoundState() {
   streak = 0;
   nextCard = null;
 
-  // Reset next card to back pattern
-  nextCardEl.innerHTML = `
-    <div class="card-face back">
-      <div class="back-pattern"></div>
-    </div>
-  `;
+  // Reset “next” card to back-visible/front-hidden
+  ensureNextCardFacesExist();
   nextCardEl.classList.remove('revealed');
 
   updateUI();
 }
 
-function flipAndShowNext(next) {
-  // Build a face for the next card (front)
-  const tmp = document.createElement('div');
-  tmp.className = 'card-face';
-  tmp.innerHTML = `
-    <div class="rank">${next.rank}</div>
-    <div class="suit" style="color:${SUIT_COLORS[next.suit]}">${next.suit}</div>
-  `;
-  // Replace child inside #nextCard with the "front"
-  nextCardEl.innerHTML = '';
-  nextCardEl.appendChild(tmp);
-  // Animate flip
-  nextCardEl.classList.add('revealed');
-}
-
 /**
  * Deterministic biased picker:
- * - Decide if player SHOULD win this guess (~44%) or lose (~56%).
- * - Build a pool of values guaranteeing that outcome for the player's choice.
- * - Include current value in the "lose" pool to make ties a loss.
- * - If the pool is empty (edge ranks), flip to the only possible outcome.
+ *  - Decide if player SHOULD win this guess (~44%) or lose (~56%).
+ *  - Build a pool of values guaranteeing that outcome for the player's choice.
+ *  - Include current value in the “loss” pool so ties count as a loss.
+ *  - If pool is empty (edge ranks), fall back to the possible outcome.
  */
 function pickNextCardBiased(curVal, guess) {
-  // Target: ~44% player win; ties = player loss
   const playerShouldWin = Math.random() < (1 - HOUSE_WIN_PROB); // ~0.44
 
-  const higher = [];        // values strictly > curVal
-  const lower  = [];        // values strictly < curVal
+  const higher = [];
+  const lower  = [];
   for (let v = 2; v <= 14; v++) {
     if (v > curVal) higher.push(v);
     else if (v < curVal) lower.push(v);
@@ -143,13 +143,12 @@ function pickNextCardBiased(curVal, guess) {
 
   let poolVals = [];
   if (guess === 'high') {
-    poolVals = playerShouldWin ? higher : [...lower, curVal]; // tie in loss pool
+    poolVals = playerShouldWin ? higher : [...lower, curVal];
   } else {
-    poolVals = playerShouldWin ? lower : [...higher, curVal]; // tie in loss pool
+    poolVals = playerShouldWin ? lower : [...higher, curVal];
   }
 
   if (poolVals.length === 0) {
-    // Edge case: if winning set is impossible (e.g., cur=A & guess=high)
     poolVals = guess === 'high' ? [...lower, curVal] : [...higher, curVal];
   }
 
@@ -162,14 +161,10 @@ function pickNextCardBiased(curVal, guess) {
 // ---------- Game Flow ----------
 function dealOpeningCard() {
   currentCard = randomCard();
-  setCard(currentCardEl, currentCard, false);
+  setCurrentCardUI(currentCard);
 
-  // Prepare next card face-down
-  nextCardEl.innerHTML = `
-    <div class="card-face back">
-      <div class="back-pattern"></div>
-    </div>
-  `;
+  // Prepare next card: ensure both faces exist, start “unrevealed”
+  ensureNextCardFacesExist();
   nextCardEl.classList.remove('revealed');
 }
 
@@ -178,7 +173,6 @@ async function placeBet() {
   try {
     await Coins.spend(bet, `High–Low bet (${bet})`, { source: 'highlow' });
   } catch (e) {
-    // If Coins module throws (e.g., insufficient coins), just stop
     console.warn('Coins.spend failed:', e);
     return;
   }
@@ -197,32 +191,34 @@ function makeGuess(dir) {
   const curVal = currentCard.value;
   nextCard = pickNextCardBiased(curVal, dir);
 
-  // Reveal with small delay for flip
-  setTimeout(() => flipAndShowNext(nextCard), 80);
+  // Update the front face with the card we will reveal
+  ensureNextCardFacesExist();
+  setNextFrontFaceUI(nextCard);
 
+  // Trigger flip: back -> 180deg, front -> 0deg
+  requestAnimationFrame(() => {
+    nextCardEl.classList.add('revealed');
+  });
+
+  // After flip animation finishes (~480ms), resolve outcome
   setTimeout(() => {
-    const win = (dir === 'high')
-      ? (nextCard.value > curVal)
-      : (nextCard.value < curVal);
-    // ties implicitly count as loss (==)
+    const win = (dir === 'high') ? (nextCard.value > curVal) : (nextCard.value < curVal);
+    // ties (==) are losses
 
     if (win) {
       streak++;
 
-      // Move next -> current for another guess
+      // Move next -> current for next guess
       currentCard = nextCard;
-      setCard(currentCardEl, currentCard, false);
+      setCurrentCardUI(currentCard);
 
-      // Reset next to back for next round
-      nextCardEl.innerHTML = `
-        <div class="card-face back"><div class="back-pattern"></div></div>
-      `;
+      // Reset next card to back (face-down) for another guess
       nextCardEl.classList.remove('revealed');
 
       awaitingGuess = true;
       updateUI();
     } else {
-      // Loss → round ends, streak reset, no payout
+      // Loss: end round, no payout
       resetRoundState();
       // subtle shake feedback
       currentCardEl.animate(
@@ -263,7 +259,7 @@ if (btnUp)   btnUp.addEventListener('click',   () => { bet = Math.max(MIN_BET, M
 
 btnStart.addEventListener('click', placeBet);
 btnHigh.addEventListener('click', () => makeGuess('high'));
-btnLow.addEventListener('click',  () => makeGuess('low'));
+btnLow .addEventListener('click', () => makeGuess('low'));
 btnCash.addEventListener('click', cashOut);
 btnReset.addEventListener('click', () => {
   resetRoundState();
