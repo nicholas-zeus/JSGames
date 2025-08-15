@@ -4,24 +4,27 @@
   <meta charset="utf-8" />
   <title>High–Low</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Your global site theme -->
+  <!-- Shared site theme -->
   <link rel="stylesheet" href="css/style.css" />
-  <!-- Game-local styles -->
+  <!-- Game styles -->
   <link rel="stylesheet" href="css/highlow.css" />
 </head>
 
 <body class="casino-dark">
   <div class="site-shell">
-    <!-- optional site header/nav goes here -->
+    <!-- Shared Header -->
     <header class="site-header">
-    <div id="coin-ui-root"></div>
-    <div class="logo">Trendy Games</div>
-    <input type="checkbox" id="menu-toggle" />
-    <label for="menu-toggle" class="menu-icon">&#9776;</label>
-    <nav class="nav">
-      <a href="index.html">Home</a>
-    </nav>
-  </header>
+      <div id="coin-ui-root"></div>
+      <div class="logo">Trendy Games</div>
+
+      <!-- Keep input + label + nav order if you use the mobile drawer -->
+      <input type="checkbox" id="menu-toggle" />
+      <label for="menu-toggle" class="menu-icon">&#9776;</label>
+      <nav class="nav">
+        <a href="index.html">Home</a>
+      </nav>
+    </header>
+
     <main class="hl-container">
       <section class="hl-table shadow-xl">
         <header class="hl-header">
@@ -29,7 +32,15 @@
           <p class="hl-sub">Guess the next card. Cash out before you lose.</p>
         </header>
 
-        <!-- Score/State -->
+        <!-- Status banner (headline + subline); JS updates these -->
+        <div class="hl-status" aria-live="polite">
+          <div id="statusTitle" class="status-head">Place your bet</div>
+          <div id="statusSub" class="status-sub">
+            Adjust the slider (10–100) and tap <strong>Place Bet</strong>.
+          </div>
+        </div>
+
+        <!-- Stats -->
         <div class="hl-stats">
           <div class="stat">
             <div class="label">Bet</div>
@@ -55,8 +66,13 @@
           </div>
           <div class="vs">→</div>
           <div class="card next" id="nextCard">
+            <!-- next card must have both faces; JS ensures/front fills -->
             <div class="card-face back">
               <div class="back-pattern"></div>
+            </div>
+            <div class="card-face front">
+              <div class="rank"></div>
+              <div class="suit"></div>
             </div>
           </div>
         </div>
@@ -75,16 +91,20 @@
           <div class="actions">
             <button id="btnStart" class="btn primary">Place Bet</button>
             <button id="btnHigh" class="btn" disabled>Higher ↑</button>
-            <button id="btnLow" class="btn" disabled>Lower ↓</button>
+            <button id="btnLow"  class="btn" disabled>Lower ↓</button>
             <button id="btnCashOut" class="btn success" disabled>Cash Out</button>
             <button id="btnReset" class="btn ghost">Reset</button>
           </div>
         </div>
 
+        <footer class="hl-hint">
+          <small>Up to 3 wins with increasing bonus after each win. Ties lose.</small>
+        </footer>
       </section>
     </main>
   </div>
 
+  <!-- Game logic (will update #statusTitle / #statusSub and enforce coin checks) -->
   <script type="module" src="js/highlow.js"></script>
 </body>
 </html>
