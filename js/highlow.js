@@ -191,7 +191,7 @@ function dealOpeningCard() {
   nextCardEl.classList.remove('revealed');
 }
 
-function resetRoundState() {
+function resetRoundState(keepStatus = false) {
   inRound = false;
   awaitingGuess = false;
   streak = 0;
@@ -200,15 +200,14 @@ function resetRoundState() {
   ensureNextCardFacesExist();
   nextCardEl.classList.remove('revealed');
 
-  // Pre-round message
-  setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.');
+  if (!keepStatus) {
+    setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.', 'neutral');
+  }
   updateUI();
 }
-
 async function placeBet() {
   if (inRound || awaitingGuess) return;
 
-  // Spend and respect the returned result object
   let result;
   try {
     result = await Coins.spend(bet, `High–Low bet (${bet})`, { source: 'highlow' });
@@ -218,22 +217,20 @@ async function placeBet() {
   }
 
   if (!result || result.ok !== true) {
-    // Insufficient or failed — do not start a round
     try { Coins.toast?.('Not enough coins for that bet.'); } catch {}
-    setStatus('Place your bet', 'Not enough coins for that bet.');
+    setStatus('Place your bet', 'Not enough coins for that bet.', 'neutral');
     updateUI();
     return;
   }
 
-  // Bet accepted → start round
   inRound = true;
   streak = 0;
   dealOpeningCard();
   awaitingGuess = true;
 
-  setStatus('Guess the next card', 'Choose Higher or Lower. Ties lose. Up to 3 wins with increasing bonus.');
+  setStatus('Guess the next card', 'Choose Higher or Lower. Ties lose. Up to 3 wins with increasing bonus.', 'neutral');
   updateUI();
-}
+} 
 
 function makeGuess(dir) {
   if (!inRound || !awaitingGuess) return;
@@ -244,45 +241,43 @@ function makeGuess(dir) {
   const curVal = currentCard.value;
   nextCard = pickNextCardBiased(curVal, dir);
 
-  // Fill next card's front face and flip
   ensureNextCardFacesExist();
   setNextFrontFaceUI(nextCard);
   requestAnimationFrame(() => nextCardEl.classList.add('revealed'));
 
-  // After flip animation completes, resolve outcome
   setTimeout(() => {
     const win = (dir === 'high') ? (nextCard.value > curVal) : (nextCard.value < curVal);
-    // ties count as loss implicitly
+    // ties count as loss
 
     if (win) {
-      streak = Math.min(MAX_STREAK, streak + 1);
+      streak = Math.min(3, streak + 1);
 
       // Move next -> current
       currentCard = nextCard;
       setCurrentCardUI(currentCard);
 
-      // Reset next to facedown for potential next guess
+      // Reset next to facedown
       nextCardEl.classList.remove('revealed');
 
       const potCoins = computePot(streak, bet);
       if (streak === 1) {
-        setStatus('Round 1 win!', `Pot: ${potCoins} coins. Cash out or continue for better rewards.`);
+        setStatus('Round 1 win!', `Pot: ${potCoins} coins. Cash out or continue for better rewards.`, 'win');
         awaitingGuess = true; // can continue
       } else if (streak === 2) {
-        setStatus('Round 2 win!', `Pot: ${potCoins} coins. Cash out or go for one more to boost rewards.`);
+        setStatus('Round 2 win!', `Pot: ${potCoins} coins. Cash out or go for one more to boost rewards.`, 'win');
         awaitingGuess = true; // can continue
       } else {
-        // streak == 3 (max)
-        setStatus('Round 3 win — congratulations!', `Pot: ${potCoins} coins. End of the round — cash out to bank your coins.`);
-        awaitingGuess = false; // no more guesses at max streak
+        // streak === 3 (max)
+        setStatus('Round 3 win — congratulations!', `Pot: ${potCoins} coins. End of the round — cash out to bank your coins.`, 'win');
+        awaitingGuess = false; // stop further guesses at cap
       }
 
       updateUI();
     } else {
-      // Loss → end round, no payout
-      setStatus('You lose this round', 'Pot: 0 coins. Try again — set your bet and Place Bet.');
+      // Loss → show banner with red tint and keep it on screen
+      setStatus('You lose this round', 'Pot: 0 coins. Try again — set your bet and Place Bet.', 'loss');
 
-      // subtle shake feedback
+      // subtle shake
       currentCardEl.animate(
         [
           { transform: 'translateX(0)' },
@@ -293,7 +288,8 @@ function makeGuess(dir) {
         { duration: 280, easing: 'ease-in-out' }
       );
 
-      resetRoundState();
+      // Reset state but DON'T overwrite the banner we just set
+      resetRoundState(true);
     }
   }, 520);
 }
@@ -334,5 +330,5 @@ btnReset.addEventListener('click', () => { resetRoundState(); dealOpeningCard();
 
 // ---------- Boot ----------
 dealOpeningCard();
-setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.');
+setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.', 'neutral');
 updateUI();
