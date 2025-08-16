@@ -1,7 +1,28 @@
 // High–Low Game (elegant casino style, biased RNG, Coins-integrated)
 import { Coins } from './coins.js';
 Coins.init({ ui: true, source: 'highlow' });
+unifyCoinIcons();
+setTimeout(unifyCoinIcons, 200); // retry shortly in case badge loads late
+// Helper: attach the same coin SVG used by the site-wide system
+function unifyCoinIcons() {
+  // Look for the SVG from the global coin badge
+  const src = document.querySelector('.coin-badge svg');
+  if (!src) return; // If badge not ready yet, try again later
 
+  // Our two stat displays
+  const targets = [
+    document.getElementById('betDisplay')?.parentElement,
+    document.getElementById('cashOutValue')?.parentElement
+  ].filter(Boolean);
+
+  for (const el of targets) {
+    // Remove any old SVGs (avoid duplicates)
+    [...el.querySelectorAll('svg')].forEach(s => s.remove());
+    // Add a space + clone of the global SVG
+    el.appendChild(document.createTextNode(' '));
+    el.appendChild(src.cloneNode(true));
+  }
+}
 // ---------- Config ----------
 const MIN_BET = 10;
 const MAX_BET = 100;
