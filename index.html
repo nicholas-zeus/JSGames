@@ -13,51 +13,104 @@
 </head>
 <body>
 
-  <!-- Shared Header -->
+  <!-- Sticky Header (no nav) -->
   <header class="site-header">
-    <!-- Coins on the left -->
-    <div id="coin-ui-root"></div>
-
-    <!-- Centered site title -->
+    <div class="header-left">
+      <div id="coin-ui-root"></div>
+    </div>
     <div class="logo">Trendy Games</div>
-
-    <!-- Keep input + label + nav order for the mobile drawer to work -->
-    <input type="checkbox" id="menu-toggle" />
-    <label for="menu-toggle" class="menu-icon">&#9776;</label>
-
-    <!-- Nav on the right -->
-    <nav class="nav">
-      <a href="index.html">Home</a>
-      <!-- Add more navigation links here later -->
-    </nav>
+    <div class="header-right"><!-- empty for now --></div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="hero">
-    <h1>Play Beautiful Games</h1>
+  <!-- Recently Played -->
+  <section id="recent-section" class="recent-section" hidden>
+    <div class="section-head">
+      <h2>Recently Played</h2>
+    </div>
+    <div id="recent-strip" class="recent-strip" role="list"></div>
   </section>
 
-  <!-- Games List -->
-  <section class="games-grid">
-    <div class="game-card">
-      <h2>2048</h2>
-      <p>Merge tiles to reach 2048. A classic puzzle with a rainbow twist.</p>
-      <a href="2048.html">Play Now</a>
+  <!-- Featured Section -->
+  <section class="featured-section">
+    <div class="section-head">
+      <h2>Featured</h2>
     </div>
-    <div class="game-card">
-      <h2>Sudoku</h2>
-      <p>Test your logic skills with colorful Sudoku puzzles. Easy to hard.</p>
-      <a href="sudoku.html">Play Now</a>
-    </div>
-    <div class="game-card">
-      <h2>Tetris</h2>
-      <p>Stack falling blocks and clear lines in this beautiful classic.</p>
-      <a href="tetris.html">Play Now</a>
-    </div>
-    <div class="game-card">
-      <h2>High–Low</h2>
-      <p>Guess if the next card will be higher or lower. Win coins or lose them!</p>
-      <a href="highlow.html">Play Now</a>
+    <div id="featured-grid" class="games-grid" role="list">
+      <!-- Each card has data attributes for localStorage -->
+      <a class="game-card" role="listitem"
+         href="2048.html"
+         data-game-id="2048"
+         data-title="2048"
+         data-thumb="assets/2048.png">
+        <div class="card-media">
+          <img src="assets/2048.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">2048</h3>
+          <p class="card-desc">Merge tiles to reach 2048. A classic puzzle with a rainbow twist.</p>
+          <span class="card-cta">Play</span>
+        </div>
+      </a>
+
+      <a class="game-card" role="listitem"
+         href="sudoku.html"
+         data-game-id="sudoku"
+         data-title="Sudoku"
+         data-thumb="assets/sudoku.png">
+        <div class="card-media">
+          <img src="assets/sudoku.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Sudoku</h3>
+          <p class="card-desc">Test your logic skills with colorful Sudoku puzzles. Easy to hard.</p>
+          <span class="card-cta">Play</span>
+        </div>
+      </a>
+
+      <a class="game-card" role="listitem"
+         href="tetris.html"
+         data-game-id="tetris"
+         data-title="Tetris"
+         data-thumb="assets/tetris.png">
+        <div class="card-media">
+          <img src="assets/tetris.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">Tetris</h3>
+          <p class="card-desc">Stack falling blocks and clear lines in this beautiful classic.</p>
+          <span class="card-cta">Play</span>
+        </div>
+      </a>
+
+      <a class="game-card" role="listitem"
+         href="highlow.html"
+         data-game-id="highlow"
+         data-title="High–Low"
+         data-thumb="assets/highlow.png">
+        <div class="card-media">
+          <img src="assets/highlow.png" alt="" onerror="this.style.display='none'">
+        </div>
+        <div class="card-body">
+          <h3 class="card-title">High–Low</h3>
+          <p class="card-desc">Guess if the next card will be higher or lower.</p>
+          <span class="card-cta">Play</span>
+        </div>
+      </a>
+      <a class="game-card" role="listitem"
+   href="tower.html"
+   data-game-id="tower"
+   data-title="Tower Stack"
+   data-thumb="assets/tower.png">
+  <div class="card-media">
+    <img src="assets/tower.png" alt="" onerror="this.style.display='none'">
+  </div>
+  <div class="card-body">
+    <h3 class="card-title">Tower Stack</h3>
+    <p class="card-desc">Stack blocks as high as you can without toppling the tower.</p>
+    <span class="card-cta">Play</span>
+  </div>
+</a>
+
     </div>
   </section>
 
@@ -65,6 +118,91 @@
   <script type="module">
     import { Coins } from './js/coins.js';
     Coins.init({ ui: true, source: 'index' });
+  </script>
+
+  <!-- Recently Played script -->
+  <script>
+  (function () {
+    const KEY = 'recentGames';
+    const MAX = 10;
+
+    function saveRecent(entry) {
+      try {
+        const list = JSON.parse(localStorage.getItem(KEY) || '[]');
+        const filtered = list.filter(x => x.id !== entry.id);
+        filtered.unshift({ ...entry, lastPlayed: new Date().toISOString() });
+        localStorage.setItem(KEY, JSON.stringify(filtered.slice(0, MAX)));
+      } catch (e) {}
+    }
+
+    function renderRecent() {
+  const section = document.getElementById('recent-section');
+  const strip = document.getElementById('recent-strip');
+  let list = [];
+  try {
+    list = JSON.parse(localStorage.getItem('recentGames') || '[]');
+  } catch (e) {}
+
+  if (!list || list.length === 0) {
+    section.hidden = true;
+    return;
+  }
+
+  section.hidden = false;
+  strip.innerHTML = '';
+
+  const MAX = 10;
+  list.slice(0, MAX).forEach(item => {
+    const li = document.createElement('a');
+    li.className = 'recent-card';
+    li.href = item.url || '#';
+    li.setAttribute('role','listitem');
+    li.title = item.title || item.id || 'Game';
+
+    const thumbSrc = item.thumb || '';
+    const hasThumb = !!thumbSrc;
+
+    // IMPORTANT: title is now OUTSIDE .recent-thumb, so it becomes the second row
+    li.innerHTML = `
+      <div class="recent-thumb"${hasThumb ? '' : ' data-fallback="true"'}>
+        ${hasThumb ? `<img src="${thumbSrc}" alt="">` : ''}
+      </div>
+      <span class="recent-title">${item.title || item.id}</span>
+    `;
+
+    if (hasThumb) {
+      const img = li.querySelector('img');
+      img.addEventListener('error', () => {
+        // If image fails, mark fallback (thumbnail area gets a neutral bg)
+        const thumbDiv = li.querySelector('.recent-thumb');
+        if (thumbDiv) {
+          img.style.display = 'none';
+          thumbDiv.dataset.fallback = 'true';
+        }
+        // Title is already visible below, so nothing else needed
+      });
+    }
+
+    strip.appendChild(li);
+  });
+}
+
+
+    const grid = document.getElementById('featured-grid');
+    if (grid) {
+      grid.addEventListener('click', (e) => {
+        const a = e.target.closest('a.game-card');
+        if (!a) return;
+        const id = a.dataset.gameId || a.href;
+        const title = a.dataset.title || a.textContent.trim() || 'Game';
+        const url = a.getAttribute('href');
+        const thumb = a.dataset.thumb || '';
+        saveRecent({ id, title, url, thumb });
+      });
+    }
+
+    renderRecent();
+  })();
   </script>
 </body>
 </html>

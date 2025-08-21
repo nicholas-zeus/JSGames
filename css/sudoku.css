@@ -1,25 +1,70 @@
+/* =========================================================
+   sudoku.css — One-viewport layout + clear subgrid lines
+   - Header-aware shell using 100dvh (stable on mobile)
+   - Body no-scroll for game pages
+   - Board sized via --board-px so it NEVER overflows the shell
+   - Grey cell lines; black subgrid edges
+   ========================================================= */
+
+/* ---- Header-aware sizing ---- */
+:root {
+  --header-h: 64px;      /* js sets actual .site-header height */
+  --board-px: 320px;     /* js sets this to the largest safe square */
+}
+
+/* Lock page scroll off for game pages */
+html, body {
+  height: 100dvh;
+  min-height: 100dvh;
+}
+body.game {
+  overflow: hidden;
+}
+
+/* Shell below the sticky header */
+.sudoku-shell {
+  height: calc(100dvh - var(--header-h));
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow: hidden; /* never spill outside one viewport */
+}
+
+/* Narrow, centered UI column */
+.sudoku-ui {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  width: 100%;
+  max-width: 600px; /* comfortable width for board + controls */
+}
+
+/* ====== Container & Title ====== */
 .game-container {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1rem;
   user-select: none;
+  gap: 12px;
 }
 
-/* Title */
 .game-container h1 {
-  font-size: 3rem;
-  margin: 1rem 0;
+  font-size: clamp(1.5rem, 4.5vw, 2.25rem);
+  margin: 0.25rem 0 0.5rem;
   text-align: center;
 }
 
-/* Control Panel */
+/* ====== Controls ====== */
 .controls {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
 }
 
 select, button {
@@ -31,40 +76,78 @@ select, button {
   cursor: pointer;
 }
 
-/* Board */
+/* Ensure controls wrap and never force page scroll */
+.controls { max-width: 100%; }
+
+/* ====== Board ====== */
+/* Use borders (not gaps) so we can style subgrid edges separately */
 .board {
   display: grid;
-  gap: 4px;
-  background: #222;
-  padding: 8px;
+  gap: 0;                       /* borders draw lines, not gaps */
+  margin: 0 auto;
+  background: #fff;
+  border: 2px solid #000;       /* outer frame (black) */
   border-radius: 12px;
-  box-shadow: 0 0 20px rgba(0,0,0,0.3);
-  max-width: 100vw;
-  overflow: auto;
+  padding: 0;                   /* borders + cells create all lines */
+  box-shadow: 0 0 20px rgba(0,0,0,0.15);
+
+  /* CRITICAL: size set via CSS var so it never overflows remaining height */
+  width: var(--board-px);
+  height: var(--board-px);
+  max-width: 100%;
+  max-height: 100%;
 }
 
+/* The board must never cause the page to scroll */
+.sudoku-shell .game-container {
+  overflow: hidden;
+}
+
+/* ====== Cells ====== */
 .cell {
-  width: 9vw;
-  height: 9vw;
-  max-width: 50px;
-  max-height: 50px;
-  min-width: 30px;
-  min-height: 30px;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 1 / 1;          /* perfect squares */
+  border: 1px solid #999;       /* regular grid lines (grey) */
+
   text-align: center;
-  font-size: 1.2rem;
-  font-weight: bold;
-  border: none;
+  font-size: clamp(1rem, 5vmin, 2.2rem);
+  font-weight: 700;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  color: #111;
+  background: #fff;
   outline: none;
-  background: white;
-  color: #333;
-  border-radius: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;             /* keep seams clean between cells */
 }
 
+/* Given clues (readonly) */
 .cell[readonly] {
-  background: #ccc;
-  color: #666;
+  background: #f2f2f2;
+  color: #000;
 }
 
-.highlight {
-  background-color: #8ef5b3 !important;
+/* Focus state */
+.cell:focus {
+  background: #eef7ff;
+  border-color: #4a90e2;        /* focus ring color */
+}
+
+/* ====== Subgrid lines (override the grey cell borders) ====== */
+/* JS adds these classes to cells at subgrid boundaries */
+.subgrid-border-top  { border-top:    2px solid #000 !important; }
+.subgrid-border-left { border-left:   2px solid #000 !important; }
+
+/* (Outer bottom/right edges are already strong via the board's frame) */
+
+/* ====== Status helpers ====== */
+.highlight { background-color: #e9ffe9 !important; }  /* hint highlight */
+.cell.conflict { background: #ffe8e8 !important; }    /* optional conflict */
+
+/* ====== Compact tweaks for very short/narrow devices ====== */
+@media (max-height: 620px) {
+  .game-container h1 { font-size: clamp(1.25rem, 4vw, 1.8rem); }
+  select, button { padding: 0.45rem 0.85rem; font-size: 0.95rem; }
 }

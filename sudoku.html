@@ -2,41 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sudoku Rainbow</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sudoku</title>
 
-  <!-- Shared styles + Sudoku styles -->
-  <link rel="stylesheet" href="css/style.css">
+  <!-- Page styles: game-specific first, then shared -->
   <link rel="stylesheet" href="css/sudoku.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
+<body class="game">
+  <!-- Sticky Header (coins | title | back-home) -->
   <header class="site-header">
-    <div id="coin-ui-root"></div>
+    <div class="header-left">
+      <div id="coin-ui-root"></div>
+    </div>
     <div class="logo">Trendy Games</div>
-    <input type="checkbox" id="menu-toggle" />
-    <label for="menu-toggle" class="menu-icon">&#9776;</label>
-    <nav class="nav">
-      <a href="index.html">Home</a>
-    </nav>
+    <div class="header-right">
+      <a class="back-home" href="index.html" aria-label="Back to Home">Back to Home</a>
+    </div>
   </header>
 
-  <div class="game-container">
-    <h1>Sudoku</h1>
-    <div class="controls">
-      <label for="difficulty">Difficulty:</label>
-      <select id="difficulty">
-        <option value="4">Easy (4x4)</option>
-        <option value="6">Medium (6x6)</option>
-        <option value="9" selected>Hard (9x9)</option>
-      </select>
-      <button id="btnNewGame">New Game</button>
-      <button id="btnHint">Hint (<span id="hintCount">3</span>)</button>
-      <button id="btnCheck">Check</button>
+  <!-- One-viewport shell (header-aware; no page scroll) -->
+  <div class="sudoku-shell">
+    <div class="sudoku-ui">
+      <div class="game-container">
+        <h1>Sudoku</h1>
+
+        <div class="controls">
+          <label for="difficulty">Difficulty:</label>
+          <select id="difficulty">
+            <option value="4">Easy (4x4)</option>
+            <option value="6">Medium (6x6)</option>
+            <option value="9" selected>Hard (9x9)</option>
+          </select>
+
+          <button id="btnNewGame">New Game</button>
+          <button id="btnHint">Hint (<span id="hintCount">3</span>)</button>
+          <button id="btnCheck">Check</button>
+        </div>
+
+        <div id="board" class="board"></div>
+      </div>
     </div>
-    <div id="board" class="board"></div>
   </div>
 
-  <!-- Sudoku as ESM -->
+  <!-- Sudoku ESM -->
   <script type="module" src="js/sudoku.js"></script>
 </body>
 </html>

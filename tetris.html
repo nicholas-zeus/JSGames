@@ -4,34 +4,49 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Tetris</title>
-  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Game-specific styles first, then shared styles -->
   <link rel="stylesheet" href="css/tetris.css" />
+  <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
+<body class="game">
+  <!-- Sticky Header (coins | title | back-home) -->
   <header class="site-header">
-    <div id="coin-ui-root"></div>
+    <div class="header-left">
+      <div id="coin-ui-root"></div>
+    </div>
     <div class="logo">Trendy Games</div>
-    <input type="checkbox" id="menu-toggle" />
-    <label for="menu-toggle" class="menu-icon">&#9776;</label>
-    <nav class="nav">
-      <a href="index.html">Home</a>
-    </nav>
+    <div class="header-right">
+      <a class="back-home" href="index.html" aria-label="Back to Home">Back to Home</a>
+    </div>
   </header>
 
+  <!-- One-viewport game shell (header-aware; no page scroll) -->
   <div class="tetris-shell">
     <div class="tetris-ui">
       <div class="tetris-wrapper">
-        <div class="tetris-high-score">High Score: <span id="highScore">0</span></div>
+        <div class="tetris-high-score">
+          High Score: <span id="highScore">0</span>
+        </div>
+
         <div class="tetris-container">
           <canvas id="tetris"></canvas>
-          <div id="pauseOverlay"><div class="pause-label">PAUSED</div></div>
+
+          <!-- Pause / Game Over overlay sits inside the container -->
+          <div id="pauseOverlay">
+            <div class="pause-label">PAUSED</div>
+          </div>
         </div>
+
         <div class="tetris-controls-row">
+          <!-- Stats -->
           <div class="tetris-stats">
             <div class="tetris-score">Score: <span id="scoreBottom">0</span></div>
             <div class="tetris-level">Level: <span id="level">0</span></div>
             <div class="tetris-lines">Lines: <span id="lines">0</span></div>
           </div>
+
+          <!-- D‑pad -->
           <div class="tetris-control-pad">
             <div class="tetris-controls">
               <div class="control-row">
@@ -44,10 +59,12 @@
               </div>
             </div>
           </div>
+
+          <!-- Actions (no fullscreen) -->
           <div class="tetris-actions-vertical">
             <button id="pauseBtn">Pause</button>
             <button id="resetBtn">Reset</button>
-            <button id="fullscreenBtn">⛶</button>
+            <!-- fullscreen removed by design -->
           </div>
         </div>
       </div>

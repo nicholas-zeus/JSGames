@@ -5,25 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>2048</title>
 
-  <!-- Game styles -->
+  <!-- Game styles first, then shared styles -->
   <link rel="stylesheet" href="css/2048.css" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
-<body>
-  <!-- Header: coin | title | nav (mobile: title on line1; coins/burger on line2) -->
+<body class="game">
+  <!-- Sticky Header (coins | title | back-home) -->
   <header class="site-header">
-    <div id="coin-ui-root"></div>
+    <div class="header-left">
+      <div id="coin-ui-root"></div>
+    </div>
     <div class="logo">Trendy Games</div>
-    <input type="checkbox" id="menu-toggle" />
-    <label for="menu-toggle" class="menu-icon">&#9776;</label>
-    <nav class="nav">
-      <a href="index.html">Home</a>
-    </nav>
+    <div class="header-right">
+      <!-- Visible on game pages; hidden on home via CSS -->
+      <a class="back-home" href="index.html" aria-label="Back to Home">Back to Home</a>
+    </div>
   </header>
 
   <main class="wrapper">
     <div id="gameShell">
-
       <!-- Score Display -->
       <div class="score_card">
         <div class="controls_score">
@@ -42,13 +42,11 @@
         <div class="tile-container"></div>
       </div>
 
-      <!-- Controls -->
+      <!-- Controls (fullscreen removed) -->
       <div class="controls_game">
         <button data-js="newGame" class="controls_game-btn">New Game</button>
         <button data-js="undo" class="controls_game-btn">Undo</button>
-        <button data-js="fullscreenToggle" class="controls_game-btn">Fullscreen</button>
       </div>
-
     </div>
   </main>
 

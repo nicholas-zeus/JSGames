@@ -1,68 +1,98 @@
-/* Shell & UI layout */
+/* =========================================================
+   tetris.css — One-viewport, no-scroll layout (header-aware)
+   - Uses dvh for visual viewport sizing
+   - Page never scrolls; header stays visible
+   - Canvas container is the sizing "truth"
+   - Controls wrap gracefully on short screens
+   ========================================================= */
+
+/* Root vars (header height is measured in JS and written to --header-h) */
+:root {
+  --header-h: 64px;          /* JS will set the real value */
+  --shell-pad: 12px;
+  --shell-gap: 12px;
+}
+
+/* Lock page scroll off in game pages (handled globally in 2048 too) */
+/* If you already set this in a game-global CSS, you may omit here */
+html, body {
+  height: 100dvh;            /* visual viewport height */
+  min-height: 100dvh;
+}
+body {
+  overflow: hidden;          /* no page scroll on game pages */
+}
+
+/* ---------- Header-aware game shell ---------- */
 .tetris-shell {
-  height: 100vh;
-  width: 100vw;
+  /* Fill the visual viewport minus the sticky header */
+  height: calc(100dvh - var(--header-h));
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: stretch;
-  padding: 0;
+  padding: var(--shell-pad);
+  padding-bottom: calc(var(--shell-pad) + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow: hidden;          /* prevent accidental page scroll */
 }
 
+/* Outer UI column that centers/narrows the content */
 .tetris-ui {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex: 1;
   width: 100%;
-  max-width: 420px;
-  padding: 0.5vh;
+  max-width: 480px;          /* comfortable reading width */
+  gap: var(--shell-gap);
 }
 
+/* Wrapper fills the shell (replaces old 95vh constraint) */
+.tetris-wrapper {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--shell-gap);
+}
+
+/* High score line */
 .tetris-high-score {
-  font-size: 1.5em;
-  font-weight: bold;
+  font-size: 1.2rem;
+  font-weight: 800;
   text-align: center;
 }
 
-/* Wrapper to cap total height */
-.tetris-wrapper {
-  height: 95vh;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Canvas container */
-/* Game playfield container */
+/* ---------- Canvas container (sizing truth) ---------- */
 .tetris-container {
   position: relative;
-  flex: 1;                     /* Fill all available space between UI elements */
-  display: flex;               /* Use flex to center the canvas */
-  justify-content: center;     /* Center horizontally */
-  align-items: center;         /* Center vertically */
-  min-height: 0;               /* Prevent flex overflow issues */
+  flex: 1;                   /* gets all remaining space between UI rows */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 0;             /* allow flex child (canvas) to shrink if needed */
+  overflow: hidden;
 }
 
-/* Canvas — scales with height, keeps aspect ratio */
+/* Canvas fills the container height, keeps arena aspect by width:auto */
 .tetris-container canvas {
   display: block;
-  height: 100%;                 /* Match container height */
-  width: auto;                  /* Keep aspect ratio */
-  flex: 0 0 auto;                /* Don’t stretch */
-  background: black;
+  height: 100%;
+  width: auto;               /* preserve aspect ratio (12x20 arena) */
+  flex: 0 0 auto;
+  background: #000;
   image-rendering: pixelated;
-  border: 2px solid white;
+  border: 2px solid #fff;
 }
 
-
-
-/* Controls row layout */
+/* ---------- Controls & stats row ---------- */
 .tetris-controls-row {
   display: flex;
   justify-content: center;
   align-items: center;
   gap: 16px;
-  margin-top: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;           /* allow wrap on short/landscape viewports */
 }
 
 /* Left column: Score, Level, Lines */
@@ -71,33 +101,33 @@
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
-  font-weight: bold;
-  font-size: 1.1em;
+  font-weight: 700;
+  font-size: 1rem;
 }
 
-/* Middle: Control pad */
+/* Middle: D‑pad */
 .tetris-control-pad {
   background: linear-gradient(145deg, #2c2c2c, #1a1a1a);
-  border-radius: 20px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 12px;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  max-width: 240px;
+  gap: 12px;
+  max-width: 220px;
 }
 
 .tetris-controls {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .control-row {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
 }
 
@@ -105,8 +135,8 @@
   background: #665585;
   border: none;
   padding: 8px;
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   cursor: pointer;
   border-radius: 12px;
   box-shadow:
@@ -124,24 +154,18 @@
   pointer-events: none;
 }
 
-.rotate-left {
-  transform: rotate(-180deg);
-}
+.rotate-left { transform: rotate(-180deg); }
+.rotate-down { transform: rotate(90deg); }
 
-.rotate-down {
-  transform: rotate(90deg);
-}
-
-/* Right column: Action buttons stacked */
+/* Right column: Actions (fullscreen removed by design) */
 .tetris-actions-vertical {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
 .tetris-actions-vertical button {
   padding: 8px 12px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   background-color: #444;
   color: #fff;
   border: none;
@@ -149,22 +173,18 @@
   cursor: pointer;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
+.tetris-actions-vertical button:hover { background-color: #666; }
+.tetris-actions-vertical button:active { background-color: #888; }
 
-.tetris-actions-vertical button:hover {
-  background-color: #666;
-}
+/* Hide the old fullscreen button if HTML still contains it */
+#fullscreenBtn { display: none !important; }
 
-.tetris-actions-vertical button:active {
-  background-color: #888;
-}
-
-/* Pause overlay */
+/* ---------- Pause overlay (inside container) ---------- */
 #pauseOverlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
+  inset: auto 0 0 0;         /* stick to bottom half by default */
   width: 100%;
-  height: 50%; /* bottom half of canvas */
+  height: 50%;               /* bottom half of canvas */
   background-color: rgba(0, 0, 0, 0.9);
   display: none;
   z-index: 10;
@@ -176,9 +196,23 @@
 
 .pause-label {
   color: white;
-  font-size: 2rem;
-  font-weight: bold;
+  font-size: clamp(1.2rem, 3.2vw, 2rem);
+  font-weight: 800;
   text-align: center;
   user-select: none;
   pointer-events: none;
+}
+
+/* ---------- Compact tweaks for short/landscape viewports ---------- */
+@media (max-height: 620px) {
+  .tetris-high-score { font-size: 1rem; }
+  .tetris-controls button { width: 40px; height: 40px; padding: 6px; }
+  .tetris-control-pad { padding: 10px; gap: 8px; }
+  .tetris-actions-vertical button { padding: 6px 10px; font-size: 0.9rem; }
+  .tetris-controls-row { gap: 12px; }
+}
+
+/* Optional: reduce side padding on very narrow devices */
+@media (max-width: 360px) {
+  :root { --shell-pad: 8px; }
 }

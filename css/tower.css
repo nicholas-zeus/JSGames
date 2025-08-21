@@ -1,0 +1,176 @@
+/* Tower Blocks — site-integrated styles */
+
+/* Base page shell matching your site */
+html, body {
+  margin: 0;
+  overflow: hidden;
+  height: 100%;
+  width: 100%;
+  position: relative;
+  font-family: 'Comfortaa', cursive;
+}
+
+/* Layout around the game */
+.tower-shell {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+}
+
+.tower-ui {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  max-width: 420px;
+  padding: 8px;
+}
+
+/* Fullscreen button */
+.tower-controls {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.tower-btn {
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.35);
+  color: #fff;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 18px;
+}
+.tower-btn:hover { background: rgba(255,255,255,0.25); }
+
+/* Game container (fills 1× viewport area) */
+#container {
+  width: 100%;
+  height: 100svh;      /* stable on mobile, no scroll */
+  position: relative;
+}
+
+/* SCORE — lighter for contrast on gradient */
+#container #score {
+  position: absolute;
+  top: 20px;
+  width: 100%;
+  text-align: center;
+  font-size: 10vh;
+  transition: transform 0.5s ease;
+  color: #fff;                /* was #333344 */
+  transform: translateY(-200px) scale(1);
+}
+
+/* Canvas holder */
+#container #game {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+}
+
+/* GAME OVER — lighter text */
+#container .game-over {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 85%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#container .game-over * {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+  transform: translateY(-50px);
+  color: #fff;                /* was #333344 */
+}
+
+#container .game-over h2 {
+  margin: 0;
+  padding: 0;
+  font-size: 40px;
+}
+
+/* READY STATE + START BUTTON — lighter text/border */
+#container .game-ready {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+}
+
+#container .game-ready #start-button {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  opacity: 0;
+  transform: translateY(-50px);
+  border: 3px solid #fff;     /* was #333344 */
+  padding: 10px 20px;
+  background-color: transparent;
+  color: #fff;                /* was #333344 */
+  font-size: 30px;
+}
+
+/* INSTRUCTIONS — lighter text */
+#container #instructions {
+  position: absolute;
+  width: 100%;
+  top: 16vh;
+  left: 0;
+  text-align: center;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  color: #fff;                /* added */
+  opacity: 0;
+}
+#container #instructions.hide { opacity: 0 !important; }
+
+/* State transitions */
+#container.playing #score,
+#container.resetting #score {
+  transform: translateY(0) scale(1);
+}
+
+#container.playing #instructions { opacity: 1; }
+
+#container.ready .game-ready #start-button {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#container.ended #score {
+  transform: translateY(6vh) scale(1.5);
+}
+#container.ended .game-over * {
+  opacity: 1;
+  transform: translateY(0);
+}
+#container.ended .game-over p {
+  transition-delay: 0.3s;
+}
+
+/* Fullscreen: hide header and let the game occupy full screen */
+.tower-shell:fullscreen .site-header,
+.tower-shell:-webkit-full-screen .site-header {
+  display: none !important;
+}
+
+.tower-shell:fullscreen,
+.tower-shell:-webkit-full-screen {
+  width: 100vw;
+  height: 100vh;
+}
+.tower-shell:fullscreen #container,
+.tower-shell:-webkit-full-screen #container {
+  height: 100vh;
+}
+
+/* Fallback class for browsers with limited :fullscreen support */
+body.tower-fs-active .site-header { display: none !important; }
+body.tower-fs-active .tower-shell { width: 100vw; height: 100vh; }
+body.tower-fs-active #container { height: 100vh; }

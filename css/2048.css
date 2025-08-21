@@ -1,245 +1,166 @@
 /* =========================================================
-   2048.css — iPad-safe fullscreen + no-stretch on mobile
-   - Uses dvh/dvw and safe-area in fullscreen
-   - Prevents blurry stretching: board never upscales
-   - Keeps your original look & class names
+   2048.css — One-viewport, no-scroll layout (normal mode)
+   - Uses dvh/dvw for visual viewport sizing
+   - Page never scrolls; header remains visible
+   - Board stays square and scales, no blurry stretch
+   - JS will set --header-h and --board-size precisely
    ========================================================= */
 
 /* ---------- Reset ---------- */
-*, *:before, *:after { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: border-box; }
 
-/* Base theme */
-html {
-  min-height: 100%;
-  width: 100%;
-  font-size: 16px;
-  font-family: "Rubik", sans-serif;
-  line-height: 1.5em;
+/* ---------- Root variables ---------- */
+:root {
+  /* Base board cap (never upscale beyond this px to avoid blur) */
+  --board-base: 500px;
+
+  /* Header height (JS will measure real header and set this) */
+  --header-h: 64px;
+
+  /* Game shell paddings and gaps */
+  --shell-pad: 12px;
+  --shell-gap: 12px;
+
+  /* Minimum vertical budget for UI (score + controls) to avoid overlap */
+  --ui-min: 160px;
+
+  /* Board size (JS will compute and set this); CSS fallback below */
+  --board-size: min(var(--board-base), 92vmin, 100vw - 48px);
+}
+
+/* ---------- Page / viewport locking ---------- */
+html, body {
+  height: 100dvh;              /* visual viewport */
+  min-height: 100dvh;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;            /* page never scrolls */
   color: #fff;
   background: linear-gradient(to top, #160140, #261535);
+  font: 16px/1.5 "Segoe UI", system-ui, -apple-system, sans-serif;
 }
 
-/* Optional: set a base (native) board size used to cap fullscreen width */
-:root {
-  --board-base: 500px; /* adjust if your board is designed for another px size */
+/* ---------- Main wrapper sits under sticky header ---------- */
+/* We reserve space for the header and then fill the rest with #gameShell */
+.wrapper {
+  height: calc(100dvh - var(--header-h));
+  padding: var(--shell-pad);
+  padding-bottom: calc(var(--shell-pad) + env(safe-area-inset-bottom));
+  overflow: hidden;            /* ensure inner content cannot create page scroll */
 }
 
-/* =========================================================
-   Fullscreen (iPad/Safari safe)
-   ========================================================= */
-
-/* Prevent the page itself from scrolling in fullscreen */
-html:fullscreen, body:fullscreen,
-html:-webkit-full-screen, body:-webkit-full-screen {
-  width: 100dvw;
-  height: 100dvh;
-  overflow: hidden; /* prevent page scroll in fullscreen */
-}
-
-/* Fullscreen shell pinned to the visual viewport */
-#gameShell:fullscreen,
-#gameShell:-webkit-full-screen {
-  position: fixed; /* pin to visual viewport */
-  inset: 0;
-  width: 100dvw;
-  height: 100dvh;
-
-  /* iOS safe areas */
-  padding-top: max(env(safe-area-inset-top), 12px);
-  padding-right: max(env(safe-area-inset-right), 12px);
-  padding-bottom: max(env(safe-area-inset-bottom), 12px);
-  padding-left: max(env(safe-area-inset-left), 12px);
+/* ---------- Game shell: vertically stacked UI ---------- */
+#gameShell {
+  height: 100%;
+  width: 100%;
+  max-width: 720px;            /* keep a comfortable line length on tablets */
+  margin: 0 auto;
 
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--shell-gap);
 
-  overflow: hidden; /* CRITICAL: no scrollbars in fullscreen */
-  background: linear-gradient(to top, #160140, #261535);
-  overscroll-behavior: none;
-  -webkit-overflow-scrolling: auto;
+  overflow: hidden;            /* prevent accidental inner scroll */
+  transition: transform 0.2s ease, opacity 0.2s ease;
 }
 
-/* Tighten vertical rhythm only in fullscreen */
-#gameShell:fullscreen .score_card,
-#gameShell:-webkit-full-screen .score_card {
-  margin: 0; /* remove extra vertical spacing */
-  max-width: 300px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-#gameShell:fullscreen .controls_game,
-#gameShell:-webkit-full-screen .controls_game {
-  margin: 0; /* remove previous 2rem margin-top */
-}
-
-/* ===== Board in fullscreen: no stretch =====
-   - Cap at --board-base so it never upscales (prevents blur)
-   - Still allows downscaling on small screens (via vmin/dvw)
-   - Keep it square and avoid flex growing
-*/
-#gameShell:fullscreen .gameboard,
-#gameShell:-webkit-full-screen .gameboard {
-  width: min(var(--board-base), 92vmin, 100dvw - 48px);
-  max-width: 100%;
-  aspect-ratio: 1 / 1;
-
-  /* do NOT stretch to fill column */
-  flex: 0 0 auto;
-  min-height: 0;
-  margin: 0 auto;
-
-  position: relative;
-  overflow: hidden;
-  transform-origin: top center; /* helpful if you later add JS scaling */
-}
-
-/* =========================================================
-   Your existing layout & styles
-   ========================================================= */
-
-.wrapper {
-  max-width: 500px;
-  margin: 0 auto;
-  padding: 15px;
-}
-
-.intro { margin-bottom: 60px; }
-.intro_title {
-  text-align: center;
-  color: #f9d49a;
-  font-size: 3rem;
-}
-
-/* Elegant stacked score display */
+/* ---------- Score card: compact in normal mode ---------- */
 .score_card {
-  background: rgba(255, 255, 255, 0.03);
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 8px;
-  padding: 1rem;
-  margin-bottom: 2rem;
+  padding: 0.75rem;
+  margin: 0;                   /* remove large top/bottom margins from legacy */
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
 }
 .score_card .controls_score + .controls_score {
-  margin-top: 1rem;
+  margin-top: 0.6rem;
   border-top: 1px solid rgba(249, 212, 154, 0.1);
-  padding-top: 1rem;
+  padding-top: 0.6rem;
 }
 
 .controls_score {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid #f9d49a;
-  box-shadow: 0 0 6px rgba(249, 212, 154, 0.3);
+  box-shadow: 0 0 6px rgba(249, 212, 154, 0.25);
   text-align: center;
   border-radius: 6px;
-  padding: 0.75em 1em;
+  padding: 0.55em 0.8em;
 }
-
 .controls_score-label {
   color: #aaa;
-  font-size: 0.75rem;
-  font-weight: bold;
+  font-size: clamp(0.7rem, 1.6vw, 0.8rem);
+  font-weight: 700;
   margin-bottom: 0.25rem;
   display: block;
 }
-
 .controls_score-text {
-  font-size: 2rem;
-  font-weight: 600;
+  font-size: clamp(1.4rem, 4.5vw, 2rem);
+  font-weight: 700;
   color: #f9d49a;
 }
 
-.controls_game {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  margin-top: 2rem;
-}
-.controls_game-btn {
-  padding: 0.5em 1em;
-  background: transparent;
-  color: #f9d49a;
-  outline: 2px solid #f9d49a;
-  appearance: none;
-  border: 5px solid transparent;
-  box-shadow: inset 0 0 0px 2px #d4a8cf;
-  letter-spacing: 0.1em;
-  font-weight: bold;
-  text-transform: lowercase;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-@media all and (max-width: 767px) {
-  .controls_game { width: 100%; }
-}
-
-#gameShell {
-  transition: all 0.25s ease;
-}
-
-/* Gameboard */
+/* ---------- Board: square, scalable, no stretch ---------- */
 .gameboard {
+  /* JS will set --board-size so both width/height fit the actual free space */
+  width: var(--board-size);
+  height: var(--board-size);
   aspect-ratio: 1 / 1;
-  width: 100%;
-  max-width: 500px;
-  margin: auto;
+
   padding: 8px;
-  background: #ffffff08;
-  border-radius: 5px;
+  border-radius: 6px;
+  background: #ffffff10;
   box-shadow: 0 0 8px 0px #f9d49a;
-  position: relative;
+
+  position: relative;          /* scaffolding for grid + tiles */
+  overflow: hidden;
+  flex: 0 0 auto;              /* never try to stretch in flex */
 }
 
-/* Grid */
+/* Grid underlay */
 .grid {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  position: absolute;
-  top: 0; bottom: 0; right: 0; left: 0;
-  margin: auto;
 }
 .grid_cell {
-  display: inline-block;
-  height: 25%;
-  width: 25%;
-  padding: 8px;
   float: left;
+  display: inline-block;
+  width: 25%;
+  height: 25%;
+  padding: 8px;
   background: rgba(238, 228, 218, 0.35);
   background-clip: content-box;
 }
 
-/* Tile container */
+/* Tiles layer */
 .tile-container {
   position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  margin: auto;
+  inset: 0;
   border-radius: 5px;
 }
 
-/* Tile */
+/* Tile visuals */
 .tile {
+  position: absolute;
   width: 25%;
   height: 25%;
   padding: 8px;
-  box-sizing: border-box;
   display: table;
   background: #eee4da;
   background-clip: content-box;
-  position: absolute;
   z-index: 2;
   will-change: top, left;
   transition: top 0.175s ease-out, left 0.175s ease-out;
 }
-
 .tile.initialize {
-  animation-name: newTile;
-  animation-duration: 0.175s;
-  animation-timing-function: linear;
-  animation-fill-mode: forwards;
+  animation: newTile 0.175s linear forwards;
 }
-
 @keyframes newTile {
   0% { opacity: 0; }
   50% { opacity: 0; transform: scale(0); }
@@ -247,16 +168,24 @@ html:-webkit-full-screen, body:-webkit-full-screen {
   100% { opacity: 1; transform: scale(1); }
 }
 
+/* Tile number scales with board size (¼ of one cell) */
 .tile_number {
   display: table-cell;
   vertical-align: middle;
   text-align: center;
-  font-size: 2rem;
-  font-weight: bold;
-  color: white;
+  font-weight: 700;
+  color: #fff;
+
+  font-size: clamp(0.5rem, calc(var(--board-size) / 8), 1.2 rem);
+  /* Explanation:
+     - Minimum: 0.9rem (still readable on tiny screens)
+     - Preferred: board-size / 8 (since each cell is board-size / 4, we want text ~half that)
+     - Maximum: 2.2rem (prevents overflow on wide monitors)
+  */
 }
 
-/* Position tiles by % */
+
+/* Position by % */
 .tile[data-x="0%"]  { left: 0%; }
 .tile[data-x="25%"] { left: 25%; }
 .tile[data-x="50%"] { left: 50%; }
@@ -266,7 +195,7 @@ html:-webkit-full-screen, body:-webkit-full-screen {
 .tile[data-y="50%"] { top: 50%; }
 .tile[data-y="75%"] { top: 75%; }
 
-/* Tile color by value */
+/* Colors by value */
 .tile_number[data-value="2"]    { background: #00d0a4; box-shadow: 0 0 1px 1px #00d0a4; }
 .tile_number[data-value="4"]    { background: #dd7373; box-shadow: 0 0 1px 1px #dd7373; }
 .tile_number[data-value="8"]    { background: #7d53de; box-shadow: 0 0 1px 1px #7d53de; }
@@ -278,3 +207,67 @@ html:-webkit-full-screen, body:-webkit-full-screen {
 .tile_number[data-value="512"]  { background: #d8315b; box-shadow: 0 0 1px 1px #d8315b; }
 .tile_number[data-value="1024"] { background: #1c0b19; box-shadow: 0 0 1px 1px #1c0b19; }
 .tile_number[data-value="2048"] { background: #1c0b19; box-shadow: 0 0 1px 1px #1c0b19; }
+
+/* ---------- Controls row (compact, wrap if needed) ---------- */
+.controls_game {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0;                   /* remove legacy 2rem top margin */
+}
+.controls_game-btn {
+  padding: 0.5em 1em;
+  min-height: 40px;
+  background: transparent;
+  color: #f9d49a;
+  outline: 2px solid #f9d49a;
+  appearance: none;
+  border: 5px solid transparent;
+  box-shadow: inset 0 0 0px 2px #d4a8cf;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  text-transform: lowercase;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ---------- Short/landscape viewports: tighten rhythm ---------- */
+@media (max-height: 620px) {
+  :root { --ui-min: 140px; }
+  .score_card { max-width: 340px; padding: 0.6rem; }
+  .controls_game-btn { padding: 0.45em 0.9em; min-height: 36px; }
+}
+
+/* ---------- (Legacy) Fullscreen rules kept harmless ----------
+   If any old fullscreen path gets triggered, we still prevent page scroll.
+   You’re removing the button, but keeping these as safety nets is fine.
+--------------------------------------------------------------- */
+html:fullscreen, body:fullscreen,
+html:-webkit-full-screen, body:-webkit-full-screen {
+  width: 100dvw;
+  height: 100dvh;
+  overflow: hidden;
+}
+#gameShell:fullscreen,
+#gameShell:-webkit-full-screen {
+  position: fixed; inset: 0;
+  width: 100dvw; height: 100dvh;
+  padding: max(env(safe-area-inset-top), 12px)
+           max(env(safe-area-inset-right), 12px)
+           max(env(safe-area-inset-bottom), 12px)
+           max(env(safe-area-inset-left), 12px);
+  display: flex; flex-direction: column; align-items: center; gap: var(--shell-gap);
+  overflow: hidden;
+  background: linear-gradient(to top, #160140, #261535);
+  -webkit-overflow-scrolling: auto;
+}
+#gameShell:fullscreen .score_card,
+#gameShell:-webkit-full-screen .score_card { margin: 0; max-width: 320px; }
+#gameShell:fullscreen .controls_game,
+#gameShell:-webkit-full-screen .controls_game { margin: 0; }
+#gameShell:fullscreen .gameboard,
+#gameShell:-webkit-full-screen .gameboard {
+  width: min(var(--board-base), 92vmin, 100dvw - 48px);
+  height: auto; aspect-ratio: 1 / 1; flex: 0 0 auto; min-height: 0; margin: 0 auto; position: relative;
+}

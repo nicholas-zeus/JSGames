@@ -1,18 +1,19 @@
 /* ------------------------------------------------------------
-   High–Low (Elegant Casino) — Full CSS
-   - Fits in 1 viewport, centered even with a header present
-   - Cards stay side-by-side on all widths
-   - Two-face flip (back -> out, front -> in)
-   - Status banner (headline + subline) with win/loss/neutral tints
-   - Centered, glowing casino title
-   - Evenly spaced action buttons (Reset removed)
+   High–Low (Elegant Casino) — One-Viewport, Header-Aware
+   - Locks page to one visual viewport (no scroll)
+   - Centers the table under the sticky header
+   - Uses CSS vars --header-h and --table-h (JS can refine them)
+   - Preserves side-by-side cards, status tints, casino title
 ------------------------------------------------------------- */
 
-/* Theme tokens (keeps close to site style while adding casino vibe) */
+/* Defaults (JS will set --header-h; JS can also refine --table-h) */
 :root {
+  --header-h: 64px;
+  /* Fallback table height if JS hasn’t measured yet */
+  --table-h: calc(100dvh - var(--header-h) - 24px);
   --hl-bg: #0c0a1a;
   --hl-surface: #13122a;
-  --hl-accent: #b58aff;  /* lavender accent */
+  --hl-accent: #b58aff;
   --hl-success: #21d07a;
   --hl-danger: #ff5d5d;
   --hl-gold: #e4c987;
@@ -21,55 +22,58 @@
   --radius: 16px;
 }
 
-/* Page background + text color */
+/* Page background + text color; lock scroll off on game pages */
+html, body { height: 100dvh; min-height: 100dvh; }
+body.game { overflow: hidden; }
+
 body.casino-dark {
   background: radial-gradient(1000px 600px at 50% 0%, #1e1b36, #0b0a17 50%, #070613 100%);
   color: var(--hl-text);
-  overflow: hidden; /* prevent any page scroll */
 }
 
-/* ---------- Layout: center game vertically with header present ---------- */
-html, body { height: 100%; }
-
+/* ---------- Layout: header-aware, center the table ---------- */
 .site-shell {
-  min-height: 100dvh;         /* dynamic viewport for mobile chrome */
+  min-height: 100dvh;
   display: flex;
-  flex-direction: column;     /* header on top, main fills the rest */
+  flex-direction: column;   /* header on top, main fills the rest */
 }
-.hl-stats .value svg {
-  width: 18px;
-  height: 18px;
-  vertical-align: -3px;
-}
+
 .site-header { flex: 0 0 auto; }
 
+/* The space under the sticky header; JS keeps --header-h updated */
 .hl-container {
-  flex: 1 1 auto;
-  min-height: 0 !important;   /* override any 100vh rules; use remaining space */
+  height: calc(100dvh - var(--header-h));
+  width: 100%;
   display: grid;
-  place-items: center;         /* center the table vertically & horizontally */
-  padding: 8px;
+  place-items: center;      /* center table vertically & horizontally */
+  padding: 12px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
   box-sizing: border-box;
+  overflow: hidden;         /* never spill outside one viewport */
 }
 
-/* ---------- Game card/table ---------- */
+/* ---------- Game table/card ---------- */
 .hl-table {
+  box-sizing: border-box;
   width: min(900px, 96vw);
+
+  /* Let JS force-fit scaling manage height across devices */
+  max-height: none;
+  height: auto;
+  overflow: hidden;
+
   background: linear-gradient(180deg, var(--hl-surface), #0d0c22);
   border-radius: var(--radius);
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 20px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04);
-  padding: 12px;              /* compact to fit 1 viewport comfortably */
-  max-height: calc(100dvh - 24px);
-  overflow: hidden;
-  box-sizing: border-box;
+  padding: 12px;            /* compact to fit comfortably */
 }
 
 /* ---------- Header & Title ---------- */
 .hl-header {
   display: flex;
-  justify-content: center;    /* Center horizontally */
-  align-items: center;        /* Center vertically */
+  justify-content: center;
+  align-items: center;
   padding-bottom: 8px;
   margin-bottom: 10px;
   border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -77,9 +81,9 @@ html, body { height: 100%; }
 
 .hl-title {
   font-family: 'Cinzel Decorative', 'Segoe UI', serif;
-  font-size: 48px;
+  font-size: clamp(28px, 5vw, 48px);
   font-weight: 900;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   color: var(--hl-gold);
   padding: 8px 20px;
   border: 2px solid var(--hl-gold);
@@ -99,31 +103,31 @@ html, body { height: 100%; }
 @keyframes glowPulse {
   0%, 100% {
     text-shadow:
-      0 2px 2px rgba(0, 0, 0, 0.6),
-      0 4px 6px rgba(0, 0, 0, 0.5),
-      0 6px 12px rgba(0, 0, 0, 0.4),
-      0 0 10px rgba(255, 215, 0, 0.6),
-      0 0 20px rgba(255, 215, 0, 0.4);
+      0 2px 2px rgba(0,0,0,0.6),
+      0 4px 6px rgba(0,0,0,0.5),
+      0 6px 12px rgba(0,0,0,0.4),
+      0 0 10px rgba(255,215,0,0.6),
+      0 0 20px rgba(255,215,0,0.4);
     box-shadow:
-      inset 0 0 8px rgba(255, 215, 0, 0.5),
-      0 0 12px rgba(255, 215, 0, 0.5),
-      0 0 24px rgba(255, 215, 0, 0.4);
+      inset 0 0 8px rgba(255,215,0,0.5),
+      0 0 12px rgba(255,215,0,0.5),
+      0 0 24px rgba(255,215,0,0.4);
   }
   50% {
     text-shadow:
-      0 2px 2px rgba(0, 0, 0, 0.6),
-      0 4px 6px rgba(0, 0, 0, 0.5),
-      0 6px 12px rgba(0, 0, 0, 0.4),
-      0 0 14px rgba(255, 215, 0, 0.8),
-      0 0 28px rgba(255, 215, 0, 0.6);
+      0 2px 2px rgba(0,0,0,0.6),
+      0 4px 6px rgba(0,0,0,0.5),
+      0 6px 12px rgba(0,0,0,0.4),
+      0 0 14px rgba(255,215,0,0.8),
+      0 0 28px rgba(255,215,0,0.6);
     box-shadow:
-      inset 0 0 8px rgba(255, 215, 0, 0.6),
-      0 0 14px rgba(255, 215, 0, 0.6),
-      0 0 28px rgba(255, 215, 0, 0.5);
+      inset 0 0 8px rgba(255,215,0,0.6),
+      0 0 14px rgba(255,215,0,0.6),
+      0 0 28px rgba(255,215,0,0.5);
   }
 }
 
-/* ---------- Status banner (JS updates #statusTitle / #statusSub) ---------- */
+/* ---------- Status banner ---------- */
 .hl-status {
   border-radius: 12px;
   padding: 12px 14px;
@@ -133,18 +137,10 @@ html, body { height: 100%; }
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 8px rgba(0,0,0,0.3);
   transition: background 0.3s ease, border-color 0.3s ease;
 }
-.status-head {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: 0.2px;
-}
-.status-sub {
-  color: var(--hl-muted);
-  margin-top: 2px;
-  font-size: 13px;
-}
+.status-head { font-size: 18px; font-weight: 800; letter-spacing: .2px; }
+.status-sub  { color: var(--hl-muted); margin-top: 2px; font-size: 13px; }
 
-/* Variants for win/loss/neutral states */
+/* Win/Loss tints */
 .hl-status.win {
   background: linear-gradient(135deg, rgba(33,208,122,0.15), rgba(33,208,122,0.05));
   border-color: rgba(33,208,122,0.4);
@@ -158,9 +154,11 @@ html, body { height: 100%; }
   border-color: rgba(181,138,255,0.4);
 }
 
-/* ---------- Stats row ---------- */
+/* ---------- Stats ---------- */
 .hl-stats {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
 }
 .stat {
   background: rgba(255,255,255,0.03);
@@ -170,17 +168,21 @@ html, body { height: 100%; }
 }
 .stat .label { color: var(--hl-muted); font-size: 12px; }
 .stat .value { font-size: 18px; font-weight: 700; margin-top: 4px; }
+.hl-stats .value svg { width: 18px; height: 18px; vertical-align: -3px; }
 
 /* ---------- Cards (always side-by-side) ---------- */
 .hl-cards {
-  display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
-  gap: 12px; margin: 14px 0 8px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 14px 0 8px;
 }
 .vs { color: var(--hl-gold); font-size: 22px; font-weight: 700; opacity: .85; }
 
 .card {
   width: clamp(120px, 28vw, 200px);
-  aspect-ratio: 5/7;
+  aspect-ratio: 5 / 7;
   border-radius: 14px;
   perspective: 1200px;
   justify-self: center;
@@ -189,10 +191,14 @@ html, body { height: 100%; }
 
 /* Each face is absolutely positioned and flips in 3D */
 .card .card-face {
-  width: 100%; height: 100%; border-radius: 14px;
-  background: white; color: #111;
+  width: 100%;
+  height: 100%;
+  border-radius: 14px;
+  background: white;
+  color: #111;
   box-shadow: 0 18px 40px rgba(0,0,0,0.35);
-  position: absolute; top: 0; left: 0;
+  position: absolute;
+  top: 0; left: 0;
   overflow: hidden;
   backface-visibility: hidden;
   transform-style: preserve-3d;
@@ -202,8 +208,9 @@ html, body { height: 100%; }
 /* Back face visuals (default visible) */
 .card .card-face.back {
   background: linear-gradient(135deg, #19172f 0%, #2a2752 60%, #3a356e 100%);
-  display: grid; place-items: center;
-  transform: rotateY(0deg);           /* visible before reveal */
+  display: grid;
+  place-items: center;
+  transform: rotateY(0deg);
 }
 
 .back-pattern {
@@ -217,9 +224,7 @@ html, body { height: 100%; }
 }
 
 /* Front face starts hidden (turned away) */
-.card .card-face.front {
-  transform: rotateY(-180deg);        /* hidden before reveal */
-}
+.card .card-face.front { transform: rotateY(-180deg); }
 
 /* On reveal: back rotates out, front rotates in */
 .card.next.revealed .card-face.back  { transform: rotateY(180deg); }
@@ -240,30 +245,32 @@ html, body { height: 100%; }
 }
 
 /* ---------- Controls ---------- */
-.hl-controls {
-  display: grid; gap: 10px; margin-top: 6px;
-}
+.hl-controls { display: grid; gap: 10px; margin-top: 6px; }
 .betper { display: grid; gap: 6px; }
 .betper label { color: var(--hl-muted); font-size: 12px; }
 .bet-ctrl { display: grid; grid-template-columns: 36px 1fr 36px; gap: 8px; align-items: center; }
 
-#betRange {
-  accent-color: var(--hl-accent);
-  width: 100%;
-}
+#betRange { accent-color: var(--hl-accent); width: 100%; }
 
-/* Actions row — evenly spaced */
+/* Actions row — evenly spaced and wrap on small screens */
 .actions {
   display: flex;
+  margin:auto;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 14px; /* space between buttons */
+  gap: 14px;
   margin-top: 8px;
 }
 .actions .btn {
   flex: 1 1 auto;
   min-width: 120px;
+  max-width: 200px;
   text-align: center;
+}
+.actions .hl-guess-group {
+  display: flex;
+  gap: 14px;
+  flex: 1 1 100%;
 }
 
 /* Buttons (harmonize with site theme) */
@@ -271,8 +278,10 @@ html, body { height: 100%; }
   background: linear-gradient(180deg, #201d40, #151333);
   color: #e9e9f6;
   border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px; padding: 10px 12px;
-  font-weight: 700; letter-spacing: .3px;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 700;
+  letter-spacing: .3px;
   box-shadow: 0 8px 18px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.06);
   transition: transform .06s ease, box-shadow .2s ease, background .2s ease, opacity .2s ease;
   cursor: pointer;
@@ -292,9 +301,19 @@ html, body { height: 100%; }
   font-size: 12px;
 }
 
-/* ---------- Responsive tweaks (keep side-by-side) ---------- */
+/* ---------- Responsive tweaks ---------- */
 @media (max-width: 820px) {
   .hl-stats { grid-template-columns: 1fr 1fr 1fr; }
   .hl-cards { grid-template-columns: 1fr auto 1fr; gap: 10px; }
-  .vs { transform: none; }
+}
+@media (max-width: 560px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .actions .hl-guess-group {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: center;
+  }
 }

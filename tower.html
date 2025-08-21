@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,user-scalable=no"/>
+  <title>Tower Blocks</title>
+
+  <!-- Shared site styles (your global styles) -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- Game-specific styles -->
+  <link rel="stylesheet" href="css/tower.css" />
+</head>
+<body>
+  <!-- Shared Header (same structure/order so mobile drawer works) -->
+  <header class="site-header">
+    <div id="coin-ui-root"></div>
+    <div class="logo">Trendy Games</div>
+    <input type="checkbox" id="menu-toggle" />
+    <label for="menu-toggle" class="menu-icon">&#9776;</label>
+    <nav class="nav">
+      <a href="index.html">Home</a>
+    </nav>
+  </header>
+
+  <!-- Game shell -->
+  <div class="tower-shell">
+    <div class="tower-ui">
+      <div class="tower-controls">
+        <button id="tower-fullscreen" class="tower-btn" aria-label="Toggle Fullscreen">⛶</button>
+      </div>
+
+      <!-- Original game container and elements -->
+      <div id="container" class="ready">
+        <div id="game"></div>
+        <div id="score">0</div>
+        <div id="instructions">Click (or press the spacebar) to place the block</div>
+        <div class="game-over">
+          <h2>Game Over</h2>
+          <p>You did great!</p>
+          <p>Click or spacebar to start again</p>
+        </div>
+        <div class="game-ready">
+          <div id="start-button">Start</div>
+          <div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dependencies pinned to versions compatible with your code -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/84/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.4/TweenLite.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.4/easing/EasePack.min.js"></script>
+
+  <!-- Your game code (transpiled from your TS-like snippet) -->
+  <script src="js/tower.js"></script>
+
+  <!-- Lightweight glue for fullscreen + safe touch triggering (outside core logic) -->
+  <script>
+    (function() {
+      const shell = document.querySelector('.tower-shell');
+      const header = document.querySelector('.site-header');
+      const fsBtn = document.getElementById('tower-fullscreen');
+      const container = document.getElementById('container');
+
+      function inFullscreen() {
+        return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      }
+
+      function requestFS(el) {
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        else if (el.msRequestFullscreen) el.msRequestFullscreen();
+      }
+
+      function exitFS() {
+        if (document.exitFullscreen) document.exitFullscreen();
+        else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+        else if (document.msExitFullscreen) document.msExitFullscreen();
+      }
+
+      function updateFSState() {
+        const active = !!inFullscreen();
+        document.body.classList.toggle('tower-fs-active', active);
+        // Keep the entire game within 1x viewport (no scroll)
+        document.documentElement.style.overflow = active ? 'hidden' : '';
+        document.body.style.overflow = active ? 'hidden' : '';
+      }
+
+      fsBtn.addEventListener('click', () => {
+        if (inFullscreen()) exitFS(); else requestFS(shell);
+      });
+
+      ['fullscreenchange','webkitfullscreenchange','msfullscreenchange'].forEach(evt => {
+        document.addEventListener(evt, updateFSState, { passive: true });
+      });
+
+      // Initial call in case browser starts in any special mode
+      updateFSState();
+
+      // Optional: help touch interactions without touching core logic
+      // Avoid double-trigger between pointerdown and click on some Android browsers.
+      let tapped = false;
+      container.addEventListener('pointerdown', () => {
+        tapped = true;
+        // We let the game's document 'click' handler run naturally afterward
+        // (click fires after pointerdown). We do not call game.onAction() here
+        // to avoid changing your logic paths.
+      }, { passive: true });
+
+      container.addEventListener('click', () => {
+        // if needed, we could gate duplicate behavior with 'tapped'
+        // but we keep it no-op to preserve original click logic.
+        tapped = false;
+      }, { passive: true });
+    })();
+  </script>
+</body>
+</html>

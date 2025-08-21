@@ -11,30 +11,29 @@
   <link rel="stylesheet" href="css/highlow.css" />
 </head>
 
-<body class="casino-dark">
+<!-- Add class="game" to engage one-viewport layout; keep casino theme -->
+<body class="game casino-dark">
   <div class="site-shell">
-    <!-- Shared Header -->
+    <!-- Sticky Header (coins | title | back-home) -->
     <header class="site-header">
-      <div id="coin-ui-root"></div>
+      <div class="header-left">
+        <div id="coin-ui-root"></div>
+      </div>
       <div class="logo">Trendy Games</div>
-
-      <!-- Keep input + label + nav order if you use the mobile drawer -->
-      <input type="checkbox" id="menu-toggle" />
-      <label for="menu-toggle" class="menu-icon">&#9776;</label>
-      <nav class="nav">
-        <a href="index.html">Home</a>
-      </nav>
+      <div class="header-right">
+        <a class="back-home" href="index.html" aria-label="Back to Home">Back to Home</a>
+      </div>
     </header>
 
+    <!-- Header-aware shell centers the table and prevents page scroll -->
     <main class="hl-container">
-      <section class="hl-table shadow-xl">
+      <section class="hl-table shadow-xl" aria-label="High–Low game table">
         <header class="hl-header">
           <h1 class="hl-title">High–Low</h1>
-  
         </header>
 
         <!-- Status banner (headline + subline); JS updates these -->
-        <div class="hl-status" aria-live="polite">
+        <div class="hl-status neutral" aria-live="polite">
           <div id="statusTitle" class="status-head">Place your bet</div>
           <div id="statusSub" class="status-sub">
             Adjust the slider (10–100) and tap <strong>Place Bet</strong>.
@@ -42,10 +41,10 @@
         </div>
 
         <!-- Stats -->
-        <div class="hl-stats">
+        <div class="hl-stats" role="group" aria-label="Round statistics">
           <div class="stat">
             <div class="label">Bet</div>
-            <div class="value"><span id="betDisplay">10</span> </div>
+            <div class="value"><span id="betDisplay">10</span></div>
           </div>
           <div class="stat">
             <div class="label">Streak</div>
@@ -53,22 +52,21 @@
           </div>
           <div class="stat">
             <div class="label">Potential Cash Out</div>
-<div class="value"><span id="cashOutValue">0</span></div>
-            
+            <div class="value"><span id="cashOutValue">0</span></div>
           </div>
         </div>
 
         <!-- Cards -->
-        <div class="hl-cards">
-          <div class="card current" id="currentCard">
+        <div class="hl-cards" aria-label="Cards">
+          <div class="card current" id="currentCard" aria-label="Current card">
             <div class="card-face">
               <div class="rank" id="curRank">A</div>
               <div class="suit" id="curSuit"></div>
             </div>
           </div>
-          <div class="vs">→</div>
-          <div class="card next" id="nextCard">
-            <!-- next card must have both faces; JS ensures/front fills -->
+          <div class="vs" aria-hidden="true">→</div>
+          <div class="card next" id="nextCard" aria-label="Next card">
+            <!-- Faces (JS ensures both faces exist) -->
             <div class="card-face back">
               <div class="back-pattern"></div>
             </div>
@@ -80,24 +78,27 @@
         </div>
 
         <!-- Controls -->
-        <div class="hl-controls">
+        <div class="hl-controls" role="group" aria-label="Controls">
           <div class="betper">
             <label for="betRange">Bet</label>
             <div class="bet-ctrl">
-              <button class="btn sm" data-bet="down" title="-10">−</button>
+              <button class="btn sm" data-bet="down" title="-10" aria-label="Decrease bet">−</button>
               <input id="betRange" type="range" min="10" max="100" step="10" value="10" />
-              <button class="btn sm" data-bet="up" title="+10">+</button>
+              <button class="btn sm" data-bet="up" title="+10" aria-label="Increase bet">+</button>
             </div>
           </div>
 
-          <div class="actions">
-            <button id="btnStart" class="btn primary">Place Bet</button>
-            <button id="btnCashOut" class="btn success" disabled>Cash Out</button>
-            <button id="btnHigh" class="btn" disabled>Higher ↑</button>
-            <button id="btnLow"  class="btn" disabled>Lower ↓</button>
-            
+<div class="actions">
+  <div class="hl-guess-group">
+  <button id="btnStart" class="btn primary">Place Bet</button>
+  <button id="btnCashOut" class="btn success" disabled>Cash Out</button>
+  </div>
+  <div class="hl-guess-group">
+    <button id="btnHigh" class="btn" disabled>Higher ↑</button>
+    <button id="btnLow"  class="btn" disabled>Lower ↓</button>
+  </div>
+</div>
 
-          </div>
         </div>
 
         <footer class="hl-hint">
@@ -107,7 +108,7 @@
     </main>
   </div>
 
-  <!-- Game logic (will update #statusTitle / #statusSub and enforce coin checks) -->
+  <!-- Game logic -->
   <script type="module" src="js/highlow.js"></script>
 </body>
 </html>

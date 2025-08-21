@@ -1,6 +1,116 @@
-// js/2048.js — ESM version with coin-charged Undo and toasts
+// js/2048.js — One-viewport layout (no fullscreen), with coin rewards/undo
 import { Coins } from './coins.js';
 Coins.init({ ui: true, source: '2048' });
+
+/* =========================================================
+   One-viewport sizing
+   - Sets --header-h to the real sticky header height
+   - Computes the square board side from the game shell's free space
+   - Updates --board-size so CSS can size .gameboard precisely
+   - Debounced on resize/orientation; also observes header/shell changes
+   ========================================================= */
+
+(function viewportSizing() {
+  const root = document.documentElement;
+
+  // Debounce helper
+  const debounce = (fn, t = 80) => {
+    let id;
+    return (...args) => { clearTimeout(id); id = setTimeout(() => fn(...args), t); };
+  };
+
+  // Parse CSS px variable (fallback to number)
+  function readPxVar(name, fallback) {
+    const v = getComputedStyle(root).getPropertyValue(name).trim();
+    if (!v) return fallback;
+    const m = v.match(/([0-9.]+)/);
+    return m ? parseFloat(m[1]) : fallback;
+  }
+
+  function setHeaderVar() {
+    const header = document.querySelector('.site-header');
+    // Account for any safe-area padding applied in CSS
+    const h = header ? header.offsetHeight : 0;
+    root.style.setProperty('--header-h', `${h}px`);
+    return h;
+  }
+
+  function clamp(n, min, max) { return Math.max(min, Math.min(max, n)); }
+
+  function sizeBoard() {
+    const shell = document.getElementById('gameShell');
+    const score = document.querySelector('.score_card');
+    const controls = document.querySelector('.controls_game');
+    if (!shell) return;
+
+    // Ensure header var is fresh (fonts/layout may shift)
+    const headerH = setHeaderVar();
+
+    // Shell inner size
+    const shellRect = shell.getBoundingClientRect();
+    const shellW = Math.floor(shellRect.width);
+    const shellH = Math.floor(shellRect.height);
+
+    // Vertical UI stack (score + controls + shell gap(s))
+    const gap = parseFloat(getComputedStyle(shell).gap) || 12;
+    const scoreH = score ? score.offsetHeight : 0;
+    const controlsH = controls ? controls.offsetHeight : 0;
+
+    // Two gaps around the board in the vertical stack (score | gap | board | gap | controls)
+    const uiStack = scoreH + controlsH + gap * 2;
+
+    // Available square side: min(available width, available height after UI)
+    const freeH = shellH - uiStack;
+    let side = Math.min(shellW, freeH);
+
+    // Respect base cap to avoid upscaling blur, and a sensible minimum
+    const baseCap = readPxVar('--board-base', 500);      // from 2048.css :root
+    side = Math.min(side, baseCap);
+    side = clamp(side, 220, 9999); // minimum usable size; adjust if you prefer
+
+    root.style.setProperty('--board-size', `${Math.floor(side)}px`);
+
+    // Optional: nudge coin toasts if viewport is short so they don't overlap header
+    // (kept simple; adjust if you re-parent toasts into #gameShell later)
+    const toast = document.querySelector('.coin-toasts');
+    if (toast) {
+      if (shellH < 560 || window.matchMedia('(max-height: 560px)').matches) {
+        toast.style.top = '14vh';
+      } else {
+        toast.style.top = '18vh';
+      }
+    }
+  }
+
+  const recalc = debounce(() => {
+    // Recalculate in two frames to let fonts/layout settle during rotations
+    requestAnimationFrame(() => {
+      sizeBoard();
+      requestAnimationFrame(sizeBoard);
+    });
+  }, 80);
+
+  // Run after DOM is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    // Initial measure
+    recalc();
+
+    // Recompute on resize & orientation changes
+    window.addEventListener('resize', recalc, { passive: true });
+    window.addEventListener('orientationchange', recalc);
+
+    // Observe header & shell for intrinsic size changes (fonts, UI changes)
+    const header = document.querySelector('.site-header');
+    const shell = document.getElementById('gameShell');
+    const ro = new ResizeObserver(recalc);
+    header && ro.observe(header);
+    shell && ro.observe(shell);
+  });
+})();
+
+/* =========================================================
+   Game bootstrap
+   ========================================================= */
 
 function gameStart() {
   window.game = new Game(4);
@@ -100,15 +210,7 @@ Game.prototype.initEventListeners = function () {
     gameStart(); // call local function (ESM scope)
   });
 
-  // Fullscreen toggle
-  $('[data-js="fullscreenToggle"]').off("click.fullscreen").on("click.fullscreen", function () {
-    const shell = document.getElementById("gameShell");
-    if (!document.fullscreenElement) {
-      (shell.requestFullscreen || shell.webkitRequestFullscreen).call(shell);
-    } else {
-      (document.exitFullscreen || document.webkitExitFullscreen).call(document);
-    }
-  });
+  // (Removed) Fullscreen toggle — per new design, no fullscreen mode
 
   // Undo (costs 50 coins only if a snapshot exists)
   $('[data-js="undo"]').off("click.undo").on("click.undo", async function () {
@@ -169,8 +271,7 @@ Game.prototype.getRandomEmptyCell = function () {
   return emptyGridCells[randomIndex];
 };
 
-/* Merge & scoring */
-// Awards: 512 → +10 coins, 1024 → +20, 2048 → +100
+/* Merge & scoring (with coin rewards) */
 Game.prototype.TileMerge = function () {
   var gameBoard = this.boardFlatten();
   var newScore = this.score;

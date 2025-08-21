@@ -1,45 +1,135 @@
-// High–Low Game (elegant casino style, biased RNG, Coins-integrated)
+// High–Low Game — viewport-safe (force-fit), no btnReset
+// Keeps gameplay intact while ensuring the table never overflows the visual viewport.
 import { Coins } from './coins.js';
 Coins.init({ ui: true, source: 'highlow' });
-unifyCoinIcons();
-setTimeout(unifyCoinIcons, 200); // retry shortly in case badge loads late
-// Helper: attach the same coin SVG used by the site-wide system
-function unifyCoinIcons() {
-  // Look for the SVG from the global coin badge
-  const src = document.querySelector('.coin-badge svg');
-  if (!src) return; // If badge not ready yet, try again later
 
-  // Our two stat displays
+/* ------------------------------------------------------------------
+   Viewport sizing & force-fit scaling
+   - Writes --header-h and --table-h for CSS sizing
+   - Applies top-anchored scale() so content never overflows
+------------------------------------------------------------------- */
+function setHeaderVar() {
+  const header = document.querySelector('.site-header');
+  if (header) {
+    document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+  }
+}
+
+function setTableHeightVar() {
+  // Prefer visual viewport (accounts for mobile toolbars/IME)
+  const vv = window.visualViewport;
+  const vh = Math.floor(vv?.height || window.innerHeight);
+
+  const header = document.querySelector('.site-header');
+  const headerH = header ? header.offsetHeight : 0;
+
+  // Matches .hl-container vertical padding in CSS (12 top + 12 bottom)
+  const shellPad = 24;
+
+  // A small safety buffer to avoid rounding-induced overflow
+  const safety = 6;
+
+  const tableH = Math.max(420, vh - headerH - shellPad - safety);
+  document.documentElement.style.setProperty('--table-h', tableH + 'px');
+}
+
+// --- FORCE-FIT by scaling table if its natural content exceeds the viewport
+let _fitQueued = false;
+function queueFit() {
+  if (_fitQueued) return;
+  _fitQueued = true;
+  requestAnimationFrame(() => {
+    _fitQueued = false;
+    fitTableScale();
+  });
+}
+
+function fitTableScale() {
+  const container = document.querySelector('.hl-container');
+  const table = document.querySelector('.hl-table');
+  if (!container || !table) return;
+
+  // Top-anchor so the bottom can never be clipped
+  container.style.alignItems = 'start';
+  container.style.justifyItems = 'center';
+
+  // Reset any prior scaling to measure natural content size
+  table.style.transform = 'none';
+  table.style.transformOrigin = 'top center';
+
+  const availW = container.clientWidth;
+  const availH = container.clientHeight;
+
+  // Use scroll sizes to include full content height/width
+  const needW = table.scrollWidth;
+  const needH = table.scrollHeight;
+
+  const scale = Math.min(1, availW / needW, availH / needH);
+  table.style.transform = scale < 1 ? `scale(${scale})` : 'none';
+}
+
+function debounce(fn, wait = 120) {
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); };
+}
+
+const recalcViewport = () => { setHeaderVar(); setTableHeightVar(); queueFit(); };
+const debouncedRecalc = debounce(recalcViewport, 140);
+
+// Recalculate on common viewport changes
+window.addEventListener('resize', debouncedRecalc, { passive: true });
+window.addEventListener('orientationchange', () => setTimeout(recalcViewport, 300), { passive: true });
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', debouncedRecalc, { passive: true });
+  window.visualViewport.addEventListener('scroll', debouncedRecalc, { passive: true }); // handles toolbar show/hide
+}
+
+// Keep vars updated if the header size changes (e.g., font load)
+document.addEventListener('DOMContentLoaded', () => {
+  const headerEl = document.querySelector('.site-header');
+  if (headerEl && 'ResizeObserver' in window) {
+    new ResizeObserver(debouncedRecalc).observe(headerEl);
+  }
+});
+
+/* ------------------------------------------------------------------
+   Coins UI: reuse the site-wide coin SVG next to Bet/Cash Out values
+------------------------------------------------------------------- */
+function unifyCoinIcons() {
+  const src = document.querySelector('.coin-badge svg');
+  if (!src) return;
+
   const targets = [
     document.getElementById('betDisplay')?.parentElement,
     document.getElementById('cashOutValue')?.parentElement
   ].filter(Boolean);
 
   for (const el of targets) {
-    // Remove any old SVGs (avoid duplicates)
-    [...el.querySelectorAll('svg')].forEach(s => s.remove());
-    // Add a space + clone of the global SVG
+    [...el.querySelectorAll('svg')].forEach(s => s.remove()); // avoid dupes
     el.appendChild(document.createTextNode(' '));
     el.appendChild(src.cloneNode(true));
   }
 }
-// ---------- Config ----------
-const MIN_BET = 10;
-const MAX_BET = 100;
-const STEP_BET = 10;
+unifyCoinIcons();
+setTimeout(unifyCoinIcons, 200); // retry soon in case badge mounts a bit late
 
-const HOUSE_WIN_PROB = 0.56; // ~56% house wins; ties = player loss
+/* ------------------------------------------------------------------
+   Game config/state
+------------------------------------------------------------------- */
+const MIN_BET = 10, MAX_BET = 100, STEP_BET = 10;
+const HOUSE_WIN_PROB = 0.56; // ties = player loss
 const MAX_STREAK = 3;
 
-// ---------- State ----------
 let bet = MIN_BET;
-let streak = 0;            // current consecutive wins in active round
-let inRound = false;       // a bet has been placed and round is active
-let awaitingGuess = false; // waiting for user to press High/Low
+let streak = 0;
+let inRound = false;
+let awaitingGuess = false;
 let currentCard = null;
 let nextCard = null;
 
-// ---------- DOM ----------
+/* ------------------------------------------------------------------
+   DOM refs
+------------------------------------------------------------------- */
 const $ = (sel) => document.querySelector(sel);
 
 const betRange       = $('#betRange');
@@ -51,7 +141,6 @@ const btnStart  = $('#btnStart');
 const btnHigh   = $('#btnHigh');
 const btnLow    = $('#btnLow');
 const btnCash   = $('#btnCashOut');
-const btnReset  = $('#btnReset');
 
 const currentCardEl = $('#currentCard');
 const curRankEl     = $('#curRank');
@@ -61,18 +150,13 @@ const nextCardEl    = $('#nextCard');
 const statusHeadEl  = $('#statusTitle');
 const statusSubEl   = $('#statusSub');
 
-// ---------- Helpers: cards/suits ----------
+/* ------------------------------------------------------------------
+   Cards & suits
+------------------------------------------------------------------- */
 const SUITS = ['♠', '♥', '♦', '♣'];
 const SUIT_COLORS = { '♠': '#111', '♣': '#111', '♥': '#c21b3a', '♦': '#c21b3a' };
 const RANKS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
-
-const RANK_VAL = (r) => {
-  if (r === 'A') return 14;
-  if (r === 'K') return 13;
-  if (r === 'Q') return 12;
-  if (r === 'J') return 11;
-  return parseInt(r, 10);
-};
+const RANK_VAL = (r) => r === 'A' ? 14 : r === 'K' ? 13 : r === 'Q' ? 12 : r === 'J' ? 11 : parseInt(r,10);
 
 function randomCard() {
   const r = RANKS[(Math.random() * RANKS.length) | 0];
@@ -80,7 +164,7 @@ function randomCard() {
   return { rank: r, suit: s, value: RANK_VAL(r) };
 }
 
-// Ensure .card-face.back and .card-face.front exist at all times on nextCard
+// Ensure both faces exist on the "next" card for flipping animation
 function ensureNextCardFacesExist() {
   let back = nextCardEl.querySelector('.card-face.back');
   let front = nextCardEl.querySelector('.card-face.front');
@@ -94,10 +178,7 @@ function ensureNextCardFacesExist() {
   if (!front) {
     front = document.createElement('div');
     front.className = 'card-face front';
-    front.innerHTML = `
-      <div class="rank"></div>
-      <div class="suit"></div>
-    `;
+    front.innerHTML = `<div class="rank"></div><div class="suit"></div>`;
     nextCardEl.appendChild(front);
   }
   return { back, front };
@@ -118,98 +199,99 @@ function setNextFrontFaceUI(card) {
   if (s) { s.textContent = card.suit; s.style.color = SUIT_COLORS[card.suit]; }
 }
 
-// ---------- Status banner ----------
-// Update the status banner (headline + subline) and tint it by state.
-// type: 'neutral' | 'win' | 'loss'
+/* ------------------------------------------------------------------
+   Status banner
+------------------------------------------------------------------- */
 function setStatus(headText, subText, type = 'neutral') {
-  const headEl = document.getElementById('statusTitle');
-  const subEl  = document.getElementById('statusSub');
-  const box    = document.querySelector('.hl-status');
+  if (statusHeadEl) statusHeadEl.textContent = headText || '';
+  if (statusSubEl)  statusSubEl.textContent  = subText  || '';
 
-  if (headEl) headEl.textContent = headText || '';
-  if (subEl)  subEl.textContent  = subText  || '';
-
+  const box = document.querySelector('.hl-status');
   if (box) {
     box.classList.remove('win', 'loss', 'neutral');
     box.classList.add(type);
   }
+
+  // Long messages can increase height — re-fit after updates
+  queueFit();
 }
 
-// ---------- Pot math (your new rules, capped to streak 3) ----------
+/* ------------------------------------------------------------------
+   Pot math
+------------------------------------------------------------------- */
 function computePot(wins, b) {
   if (wins <= 0) return 0;
   const w = Math.min(MAX_STREAK, wins);
-  // base: original stake + 100% of bet per win
-  let pot = b + w * b;
-  // bonuses
-  if (w >= 2) pot += 0.5 * b;  // +50% at 2nd win
-  if (w >= 3) pot += 1.0 * b;  // +100% at 3rd win
+  let pot = b + w * b;     // base: stake + 100% per win
+  if (w >= 2) pot += 0.5*b; // +50% at 2nd win
+  if (w >= 3) pot += 1.0*b; // +100% at 3rd win
   return Math.round(pot);
 }
+const getCashOutValue = () => computePot(streak, bet);
 
-function getCashOutValue() {
-  return computePot(streak, bet);
-}
-
-// ---------- House bias (ties = loss) ----------
+/* ------------------------------------------------------------------
+   House bias (ties = loss)
+------------------------------------------------------------------- */
 function pickNextCardBiased(curVal, guess) {
-  // Decide if player should win (~44%) or lose (~56%)
   const playerShouldWin = Math.random() < (1 - HOUSE_WIN_PROB);
 
-  const higher = [];
-  const lower  = [];
-  for (let v = 2; v <= 14; v++) {
-    if (v > curVal) higher.push(v);
-    else if (v < curVal) lower.push(v);
-  }
+  const higher = [], lower = [];
+  for (let v = 2; v <= 14; v++) { if (v > curVal) higher.push(v); else if (v < curVal) lower.push(v); }
 
-  let poolVals = [];
+  let poolVals;
   if (guess === 'high') {
     poolVals = playerShouldWin ? higher : [...lower, curVal]; // include tie in loss pool
   } else {
-    poolVals = playerShouldWin ? lower : [...higher, curVal]; // include tie in loss pool
+    poolVals = playerShouldWin ? lower : [...higher, curVal];
   }
-
   if (poolVals.length === 0) {
-    // Edge case when a "win" is impossible for the chosen guess (e.g., cur=A + high)
+    // Edge when a "win" is impossible for chosen guess (e.g., cur=A + high)
     poolVals = guess === 'high' ? [...lower, curVal] : [...higher, curVal];
   }
 
   const val = poolVals[(Math.random() * poolVals.length) | 0];
-  const rank = (val === 14) ? 'A' : (val === 13 ? 'K' : (val === 12 ? 'Q' : (val === 11 ? 'J' : String(val))));
+  const rank = val === 14 ? 'A' : val === 13 ? 'K' : val === 12 ? 'Q' : val === 11 ? 'J' : String(val);
   const suit = SUITS[(Math.random() * SUITS.length) | 0];
   return { rank, suit, value: val };
 }
 
-// ---------- UI sync ----------
+/* ------------------------------------------------------------------
+   UI sync
+------------------------------------------------------------------- */
 function updateUI() {
-  // Numbers
   betDisplay.textContent = String(bet);
   if (betRange) betRange.value = String(bet);
   streakDisplay.textContent = String(streak);
   cashOutValueEl.textContent = String(getCashOutValue());
 
-  // Controls (respect your existing behavior; enforce max streak)
   const atMaxStreak = streak >= MAX_STREAK;
 
-  // Place Bet only when not in active round
   btnStart.disabled = inRound || awaitingGuess;
+  btnHigh .disabled = !(inRound && awaitingGuess && !atMaxStreak);
+  btnLow  .disabled = !(inRound && awaitingGuess && !atMaxStreak);
+  btnCash .disabled = !(inRound && getCashOutValue() > 0);
 
-  // Guess buttons when awaiting AND below max streak
-  btnHigh.disabled = !(inRound && awaitingGuess && !atMaxStreak);
-  btnLow.disabled  = !(inRound && awaitingGuess && !atMaxStreak);
+  // Lock bet slider and +/– buttons during a round
+  if (betRange) betRange.disabled = inRound;
+  if (btnDown) btnDown.disabled = inRound;
+  if (btnUp)   btnUp.disabled   = inRound;
 
-  // Cash Out if there's any positive pot in an active round
-  btnCash.disabled = !(inRound && getCashOutValue() > 0);
+  // Button enable/disable can slightly change layout → re-fit
+  queueFit();
 }
 
-// ---------- Round lifecycle ----------
+
+/* ------------------------------------------------------------------
+   Round lifecycle
+------------------------------------------------------------------- */
 function dealOpeningCard() {
   currentCard = randomCard();
   setCurrentCardUI(currentCard);
 
   ensureNextCardFacesExist();
   nextCardEl.classList.remove('revealed');
+
+  queueFit();
 }
 
 function resetRoundState(keepStatus = false) {
@@ -226,6 +308,7 @@ function resetRoundState(keepStatus = false) {
   }
   updateUI();
 }
+
 async function placeBet() {
   if (inRound || awaitingGuess) return;
 
@@ -233,8 +316,7 @@ async function placeBet() {
   try {
     result = await Coins.spend(bet, `High–Low bet (${bet})`, { source: 'highlow' });
   } catch (e) {
-    console.warn('Coins.spend error:', e);
-    return;
+    // ignore, we'll treat as failure
   }
 
   if (!result || result.ok !== true) {
@@ -251,7 +333,7 @@ async function placeBet() {
 
   setStatus('Guess the next card', 'Choose Higher or Lower. Ties lose. Up to 3 wins with increasing bonus.', 'neutral');
   updateUI();
-} 
+}
 
 function makeGuess(dir) {
   if (!inRound || !awaitingGuess) return;
@@ -267,11 +349,10 @@ function makeGuess(dir) {
   requestAnimationFrame(() => nextCardEl.classList.add('revealed'));
 
   setTimeout(() => {
-    const win = (dir === 'high') ? (nextCard.value > curVal) : (nextCard.value < curVal);
-    // ties count as loss
+    const win = dir === 'high' ? (nextCard.value > curVal) : (nextCard.value < curVal);
 
     if (win) {
-      streak = Math.min(3, streak + 1);
+      streak = Math.min(MAX_STREAK, streak + 1);
 
       // Move next -> current
       currentCard = nextCard;
@@ -283,22 +364,21 @@ function makeGuess(dir) {
       const potCoins = computePot(streak, bet);
       if (streak === 1) {
         setStatus('Round 1 win!', `Pot: ${potCoins} coins. Cash out or continue for better rewards.`, 'win');
-        awaitingGuess = true; // can continue
+        awaitingGuess = true;
       } else if (streak === 2) {
         setStatus('Round 2 win!', `Pot: ${potCoins} coins. Cash out or go for one more to boost rewards.`, 'win');
-        awaitingGuess = true; // can continue
+        awaitingGuess = true;
       } else {
-        // streak === 3 (max)
+        // streak == 3 cap
         setStatus('Round 3 win — congratulations!', `Pot: ${potCoins} coins. End of the round — cash out to bank your coins.`, 'win');
-        awaitingGuess = false; // stop further guesses at cap
+        awaitingGuess = false;
       }
 
       updateUI();
     } else {
-      // Loss → show banner with red tint and keep it on screen
+      // Loss → red banner, subtle shake, keep banner until next round
       setStatus('You lose this round', 'Pot: 0 coins. Try again — set your bet and Place Bet.', 'loss');
 
-      // subtle shake
       currentCardEl.animate(
         [
           { transform: 'translateX(0)' },
@@ -309,7 +389,7 @@ function makeGuess(dir) {
         { duration: 280, easing: 'ease-in-out' }
       );
 
-      // Reset state but DON'T overwrite the banner we just set
+      // Reset state but keep the loss banner
       resetRoundState(true);
     }
   }, 520);
@@ -317,39 +397,49 @@ function makeGuess(dir) {
 
 async function cashOut() {
   if (!inRound || streak <= 0) return;
+
   const winAmt = computePot(streak, bet);
   if (winAmt <= 0) return;
 
   try {
     await Coins.add(winAmt, `High–Low cash out (+${winAmt})`, { streak, bet, source: 'highlow' });
   } catch (e) {
-    console.warn('Coins.add failed:', e);
+    // ignore for now
   }
 
   setStatus('Round complete', `You banked ${winAmt} coins. Place your bet to start a new round.`);
   resetRoundState();
 }
 
-// ---------- Wire up ----------
+/* ------------------------------------------------------------------
+   Wire up
+------------------------------------------------------------------- */
 if (betRange) {
   betRange.addEventListener('input', (e) => {
-    // clamp + snap to step
     bet = Math.max(MIN_BET, Math.min(MAX_BET, Math.round(Number(e.target.value) / STEP_BET) * STEP_BET));
     betDisplay.textContent = String(bet);
+    queueFit();
   });
 }
 const btnDown = document.querySelector('[data-bet="down"]');
 const btnUp   = document.querySelector('[data-bet="up"]');
 if (btnDown) btnDown.addEventListener('click', () => { bet = Math.max(MIN_BET, bet - STEP_BET); updateUI(); });
-if (btnUp)   btnUp.addEventListener('click',   () => { bet = Math.max(MIN_BET, Math.min(MAX_BET, bet + STEP_BET)); updateUI(); });
+if (btnUp)   btnUp.addEventListener('click',   () => { bet = Math.min(MAX_BET, bet + STEP_BET); updateUI(); });
 
 btnStart.addEventListener('click', placeBet);
 btnHigh .addEventListener('click', () => makeGuess('high'));
 btnLow  .addEventListener('click', () => makeGuess('low'));
 btnCash .addEventListener('click', cashOut);
-btnReset.addEventListener('click', () => { resetRoundState(); dealOpeningCard(); });
 
-// ---------- Boot ----------
-dealOpeningCard();
-setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.', 'neutral');
-updateUI();
+/* ------------------------------------------------------------------
+   Boot
+------------------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', () => {
+  recalcViewport();                 // set --header-h / --table-h and fit
+  dealOpeningCard();
+  setStatus('Place your bet', 'Adjust the slider (10–100) and tap Place Bet.', 'neutral');
+  updateUI();
+
+  // A second pass once fonts/UI settle
+  setTimeout(queueFit, 200);
+});

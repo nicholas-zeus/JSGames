@@ -7,6 +7,15 @@
   padding: 0;
 }
 
+:root {
+  --header-h: 64px; /* some pages (games) will override via JS */
+  --featured-max-desktop: 65vw; /* ~60–70% window; tweak to taste */
+}
+
+html, body {
+  min-height: 100%;
+}
+
 body {
   font-family: 'Segoe UI', sans-serif;
   background: linear-gradient(to right, #6a11cb, #2575fc);
@@ -15,11 +24,8 @@ body {
 }
 
 /* =========================
-   Header (Desktop: one line)
-   coin | title | nav
-   Mobile: two lines
-   line1: title centered
-   line2: coin left | burger right (nav slides in)
+   Header (sticky)
+   coin | title | right
    ========================= */
 .site-header {
   width: 100%;
@@ -30,141 +36,202 @@ body {
 
   display: grid;
   grid-template-columns: auto 1fr auto;
-  grid-template-areas: "coin title nav";
+  grid-template-areas: "left title right";
   align-items: center;
-  padding: 1rem 2rem;
+  padding: 0.85rem 1rem;
+  backdrop-filter: saturate(120%) blur(6px);
 }
 
-#coin-ui-root { grid-area: coin; }
-.logo { grid-area: title; justify-self: center; font-size: 1.8rem; font-weight: bold; color: #fff; }
-.nav { grid-area: nav; display: flex; gap: 1.5rem; }
+.header-left  { grid-area: left; display: flex; align-items: center; gap: .5rem; }
+.logo         { grid-area: title; justify-self: center; font-size: 1.8rem; font-weight: bold; color: #fff; }
+.header-right { grid-area: right; display: flex; align-items: center; gap: .75rem; }
 
-.nav a {
+/* Back to Home (only appears on game pages where you include it) */
+.back-home {
   text-decoration: none;
-  color: #fff;
-  font-weight: 600;
-  font-size: 1rem;
-  transition: color 0.3s ease;
+  padding: .5rem .9rem;
+  background: #ffd700;
+  color: #333;
+  font-weight: 700;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.15);
+  transition: transform .15s ease, background .2s ease;
 }
-.nav a:hover { color: #ffd700; }
+.back-home:active { transform: translateY(1px); }
+.back-home:hover  { background: #ffc300; }
 
-/* Burger Menu */
-.menu-icon {
-  grid-area: nav; /* occupies the right slot on mobile */
-  display: none;
-  font-size: 2rem;
-  cursor: pointer;
-  color: white;
-  z-index: 1101;
-}
-
-#menu-toggle { display: none; }
-
-/* Mobile Nav Drawer */
-@media (max-width: 768px) {
-  .site-header {
-    grid-template-columns: 1fr 1fr;
-    grid-template-areas:
-      "title title"
-      "coin  nav";
-    row-gap: .5rem;
-    padding: 0.85rem 1rem;
-  }
-
-  .menu-icon { display: block; justify-self: end; }
-
-  .nav {
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    right: 0;
-    height: 100vh;
-    width: 240px;
-    background: rgba(0, 0, 0, 0.95);
-    padding: 2rem 1.5rem;
-    transform: translateX(100%);
-    transition: transform 0.3s ease;
-    z-index: 1100;
-  }
-
-  .nav a {
-    font-size: 1.2rem;
-    margin-bottom: 1.2rem;
-  }
-
-  /* keep this exact sibling relation in HTML:
-     input#menu-toggle + label.menu-icon + nav.nav */
-  #menu-toggle:checked + .menu-icon + .nav {
-    transform: translateX(0);
-  }
-}
+/* Coins container position in header */
+#coin-ui-root { display: inline-flex; align-items: center; }
 
 /* =========================
-   Hero
+   Recently Played (horizontal strip)
    ========================= */
-.hero {
-  text-align: center;
-  padding: 4rem 1rem 2rem;
-}
-.hero h1 {
-  font-size: 3rem;
-  font-weight: bold;
-  color: #fff;
-  animation: fadeInDown 1s ease;
-}
-
-@keyframes fadeInDown {
-  from { opacity: 0; transform: translateY(-30px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* =========================
-   Games Grid
-   ========================= */
-.games-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 2rem;
-  padding: 2rem;
+.recent-section {
+  padding: 1rem 1rem 0;
   max-width: 1200px;
   margin: 0 auto;
 }
-
-.game-card {
-  flex: 1 1 280px;
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  transition: transform 0.3s ease;
+.recent-section .section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: .5rem;
 }
-.game-card:hover { transform: translateY(-8px); }
+.recent-section h2 {
+  font-size: 1.25rem; font-weight: 800; color: #fff;
+}
 
-.game-card h2 {
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
+/* Strip: horizontal scroll; cards are fixed-width for smooth snapping */
+.recent-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 160px;
+  gap: 12px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: .25rem .25rem .75rem;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.recent-strip::-webkit-scrollbar { height: 0; } /* hide scrollbar (webkit) */
+.recent-strip { scrollbar-width: none; }       /* hide scrollbar (ff) }
+
+/* Card becomes two rows: thumbnail + caption */
+.recent-card {
+  display: grid;
+  grid-template-rows: auto auto;
+  text-decoration: none;
+  color: #fff;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  scroll-snap-align: start;
+}
+
+/* Thumbnail area */
+.recent-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: rgba(0,0,0,0.25);
+  position: relative;
+}
+.recent-thumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+/* If no image (fallback), the title will still show below in the caption area */
+
+/* Caption under the thumbnail (always visible) */
+.recent-title {
+  display: block;
+  padding: .5rem .6rem .6rem;
+  font-weight: 800;
+  font-size: .95rem;
+  line-height: 1.25;
+  color: #fff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =========================
+   Featured Grid (your request)
+   - Mobile: 2 columns
+   - Tablet/Laptop: 3 columns (container limited to ~65% of screen)
+   ========================= */
+.featured-section {
+  padding: 1rem;
+}
+.featured-section .section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 auto .75rem;
+  max-width: 1200px;
+}
+.featured-section h2 {
+  font-size: 1.25rem; font-weight: 800; color: #fff;
+}
+
+/* Base: always 2 columns (including on phones) */
+.games-grid {
+  display: grid;
+  gap: 16px;
+  padding: 0 0 2rem;
+  margin: 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 700px; /* keep mobile width sensible */
+}
+
+/* Tablet & laptop: switch to 3 columns and limit container width to ~65% of viewport */
+@media (min-width: 900px) {
+  .games-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: var(--featured-max-desktop); /* ~65% of screen by default */
+  }
+}
+
+/* Really wide screens: also cap with a hard max so it doesn’t sprawl too far */
+@media (min-width: 1400px) {
+  .games-grid {
+    max-width: min(var(--featured-max-desktop), 1200px);
+  }
+}
+
+/* Ultra-tight phones (optional): keep 2 columns as requested, just reduce gap */
+@media (max-width: 340px) {
+  .games-grid { gap: 12px; }
+}
+
+/* Game Card (anchor) */
+.game-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.25);
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+  min-height: 220px;
+}
+.game-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35);
+  background: rgba(255,255,255,0.12);
+}
+
+/* Media area keeps thumbnails tidy; falls back to text */
+.card-media {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: rgba(0,0,0,0.25);
+}
+.card-media img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+/* Body */
+.card-body {
+  display: grid;
+  align-content: start;
+  gap: .5rem;
+  padding: 1rem;
   color: #fff;
 }
-.game-card p {
-  font-size: 1rem;
-  text-align: center;
-  margin-bottom: 1.5rem;
-  color: #ddd;
-}
-.game-card a {
-  text-decoration: none;
-  padding: 0.7rem 1.5rem;
+.card-title { font-size: 1.05rem; font-weight: 800; }
+.card-desc  { font-size: .95rem; color: #e9e9e9; line-height: 1.35; }
+.card-cta   {
+  margin-top: .5rem;
+  display: inline-block;
+  padding: .5rem .9rem;
   background: #ffd700;
   color: #333;
-  font-weight: bold;
-  border-radius: 8px;
-  transition: background 0.3s ease;
+  font-weight: 800;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.12);
 }
-.game-card a:hover { background: #ffc300; }
+.game-card:focus-visible {
+  outline: 2px solid #ffd700;
+  outline-offset: 2px;
+}
 
 /* =========================
    Coins UI (Badge, Modal, Toasts)
